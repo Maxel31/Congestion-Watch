@@ -1,0 +1,42 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Docker/Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:8080
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Docker/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+    environment:
+      - GO_ENV=development
+      - ML_SERVICE_URL=http://ml:5000
+
+  ml:
+    build:
+      context: .
+      dockerfile: ml/Docker/Dockerfile
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./ml:/app
+    environment:
+      - PYTHON_ENV=development
+
+networks:
+  default:
+    name: crowdsense-network
