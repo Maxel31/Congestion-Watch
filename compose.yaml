@@ -37,6 +37,24 @@ services:
     environment:
       - PYTHON_ENV=development
 
+  postgres:
+    image: postgres:13
+    container_name: postgresql
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?err}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      POSTGRES_DB: ${POSTGRES_DB:?err}
+      # PGDATA: /var/lib/postgresql/data
+      TZ: "Asia/Tokyo"
+    ports:
+      - "5432:5432"
+    # volumes:
+    #   - ./db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 3s
+      retries: 3
+
 networks:
   default:
-    name: crowdsense-network
+    name: congestion-watch-network
