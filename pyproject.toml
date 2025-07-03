@@ -136,7 +136,7 @@ module = [
     "lightgbm.*",
     "wandb.*",
     "plotly.*",
-    "psycopg2.*",
+    "weather_fetcher",
 ]
 ignore_missing_imports = true
 
@@ -180,3 +180,11 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ] 
+
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "ruff>=0.12.1",
+    "types-psycopg2>=2.9.21.20250516",
+    "types-requests>=2.32.4.20250611",
+]
