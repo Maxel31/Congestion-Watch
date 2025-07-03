@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS predicted_score (
     id SERIAL PRIMARY KEY,
     model_id INTEGER NOT NULL REFERENCES prediction_model(id) ON DELETE CASCADE,
     score INTEGER NOT NULL,
-    target_date_id INTEGER NOT NULL REFERENCES actual_predictions_date(id) ON DELETE CASCADE,
-    predicted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    place_id INTEGER NOT NULL REFERENCES place(id) ON DELETE CASCADE,
+    target_datetime TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
