@@ -99,3 +99,12 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,macos,windows,linux,dotenv
 __pycache__/
+
+# Application logs
+*.log
+data_scheduler.log
+weather_scheduler.log
+
+# Python environment and cache
+*.pyc
+.pytest_cache/
