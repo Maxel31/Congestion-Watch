@@ -92,9 +92,12 @@ start_postgresql() {
     log_info "PostgreSQLの起動を待機中..."
     sleep 10
     
+    # 設定ファイルから環境変数を読み込み
+    source "$PROJECT_ROOT/config.env"
+    
     # ヘルスチェック
     for i in {1..30}; do
-        if docker-compose --env-file config.env exec postgres pg_isready -U congestion_user &>/dev/null; then
+        if docker-compose --env-file config.env exec postgres pg_isready -U "$POSTGRES_USER" &>/dev/null; then
             log_success "PostgreSQLが正常に起動しました"
             return 0
         fi
@@ -112,12 +115,8 @@ run_migrations() {
     
     cd "$SCRIPT_DIR"
     
-    # 環境変数設定
-    export POSTGRES_HOST=localhost
-    export POSTGRES_PORT=5432
-    export POSTGRES_USER=congestion_user
-    export POSTGRES_PASSWORD=secure_password
-    export POSTGRES_DB=congestion_watch_dev
+    # 設定ファイルから環境変数を読み込み
+    source "$PROJECT_ROOT/config.env"
     
     # 既存のスキーマをクリア（必要に応じて）
     ./migrate.sh down 2>/dev/null || true
@@ -132,8 +131,11 @@ run_migrations() {
 insert_initial_data() {
     log_info "初期データを投入中..."
     
+    # 設定ファイルから環境変数を読み込み（既に読み込まれているが念のため）
+    source "$PROJECT_ROOT/config.env"
+    
     # 初期データのSQL実行
-    PGPASSWORD=secure_password psql -h localhost -U congestion_user -d congestion_watch_dev -f "$DATABASE_DIR/seeds/initial_data.sql"
+    PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "$DATABASE_DIR/seeds/initial_data.sql"
     
     log_success "初期データ投入完了"
 }
@@ -144,12 +146,8 @@ fetch_spreadsheet_data() {
     
     cd "$PROJECT_ROOT"
     
-    # 環境変数設定
-    export POSTGRES_HOST=localhost
-    export POSTGRES_PORT=5432
-    export POSTGRES_USER=congestion_user
-    export POSTGRES_PASSWORD=secure_password
-    export POSTGRES_DB=congestion_watch_dev
+    # 設定ファイルから環境変数を読み込み（既に読み込まれているが念のため）
+    source "$PROJECT_ROOT/config.env"
     
     # スプレッドシートデータ取得
     uv run --frozen python database/src/fetch_spreadsheet_data.py
@@ -161,15 +159,18 @@ fetch_spreadsheet_data() {
 verify_setup() {
     log_info "セットアップ結果を確認中..."
     
+    # 設定ファイルから環境変数を読み込み（既に読み込まれているが念のため）
+    source "$PROJECT_ROOT/config.env"
+    
     # テーブル一覧表示
     echo ""
     log_info "=== テーブル一覧 ==="
-    PGPASSWORD=secure_password psql -h localhost -U congestion_user -d congestion_watch_dev -c "\dt"
+    PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt"
     
     # データ件数確認
     echo ""
     log_info "=== データ件数 ==="
-    PGPASSWORD=secure_password psql -h localhost -U congestion_user -d congestion_watch_dev -c "
+    PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
     SELECT 
       'actual_score' as table_name, COUNT(*) as records 
     FROM actual_score 
@@ -188,7 +189,7 @@ verify_setup() {
     # 最新データサンプル表示
     echo ""
     log_info "=== 最新データサンプル ==="
-    PGPASSWORD=secure_password psql -h localhost -U congestion_user -d congestion_watch_dev -c "
+    PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
     SELECT 
       a.score, 
       a.target_datetime, 
