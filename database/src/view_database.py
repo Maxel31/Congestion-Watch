@@ -5,25 +5,52 @@
 """
 
 import os
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 
+def load_env_file() -> None:
+    """
+    .envファイルから環境変数を読み込む
+    """
+    # プロジェクトルートの.envファイルを探す
+    current_dir = Path(__file__).parent
+    env_file = current_dir.parent.parent / ".env"
+    
+    if env_file.exists():
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    # 環境変数を上書きして最新の.envファイルの値を使用
+                    os.environ[key] = value
+
+
 class DatabaseViewer:
     def __init__(self) -> None:
+        # .envファイルを読み込み
+        load_env_file()
+        
         self.db_config: Dict[str, Any] = {
             "host": os.getenv("POSTGRES_HOST", "127.0.0.1"),
             "port": int(os.getenv("POSTGRES_PORT", "5432")),
-            "user": os.getenv("POSTGRES_USER", "postgres"),
-            "password": os.getenv("POSTGRES_PASSWORD", "password"),
+            "user": os.getenv("POSTGRES_USER", "congestion_user"),
+            "password": os.getenv("POSTGRES_PASSWORD", "secure_password"),
             "database": os.getenv("POSTGRES_DB", "congestion_watch"),
         }
 
     def get_connection(self) -> Any:
         """データベース接続を取得"""
-        return psycopg2.connect(**self.db_config)
+        try:
+            return psycopg2.connect(**self.db_config)
+        except psycopg2.OperationalError as e:
+            print(f"データベース接続エラー: {e}")
+            print(f"接続設定: user={self.db_config['user']}, host={self.db_config['host']}, db={self.db_config['database']}")
+            raise
 
     def show_table_counts(self) -> None:
         """各テーブルのレコード数を表示"""
