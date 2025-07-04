@@ -3,6 +3,10 @@
 
 ### dotenv ###
 .env
+config.env
+*.env.local
+*.env.prod
+*.env.production
 
 ### Linux ###
 *~
