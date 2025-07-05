@@ -4,7 +4,7 @@ export interface Place {
 }
 
 export interface TimeSeries {
-  timestamp: string;
+  timestamp: Date;
   actualScore?: number;
   predictedScore?: number;
 }

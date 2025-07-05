@@ -40,7 +40,7 @@ const generateTimeSeriesData = (): TimeSeries[] => {
     const isFuture = timestamp > now;
 
     data.push({
-      timestamp: timestamp.toISOString(),
+      timestamp: timestamp,
       actualScore: isFuture ? undefined : actualScore,
       predictedScore,
     });

@@ -8,7 +8,14 @@ import { usePlaceDetail, usePlaces } from "@/hooks/usePlaces";
 import { usePolling } from "@/hooks/usePolling";
 import { Clock, MapPin, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 const Dashboard = () => {
   const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null);
@@ -25,10 +32,6 @@ const Dashboard = () => {
     refetch: refreshPlaceDetail,
   } = usePlaceDetail(selectedPlaceId || 0);
 
-  const refreshInterval = parseInt(
-    import.meta.env.VITE_REFRESH_INTERVAL || "30000",
-    10
-  );
   usePolling(
     () => {
       refreshPlaces();
@@ -36,20 +39,16 @@ const Dashboard = () => {
         refreshPlaceDetail();
       }
     },
-    { interval: refreshInterval }
+    { interval: 60000 }
   );
 
   const selectedPlace = places.find((f) => f.id === selectedPlaceId);
 
   const timeSeriesData =
     placeDetail?.timeSeries.map((item) => ({
-      time: new Date(item.timestamp).toLocaleTimeString("ja-JP", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      time: new Date(item.timestamp).getTime(),
       actual: item.actualScore || null,
       predicted: item.predictedScore || null,
-      hour: new Date(item.timestamp).getHours(),
     })) || [];
 
   const getCrowdnessInfo = (value: number) => {
@@ -62,7 +61,6 @@ const Dashboard = () => {
     return { color: "#ef4444", label: "非常に混雑", bgColor: "bg-red-100" };
   };
 
-  // スピードメータコンポーネント
   const SpeedMeter = ({ value }: { value?: number }) => {
     const { color, label } =
       value !== undefined
@@ -76,7 +74,6 @@ const Dashboard = () => {
           className="w-full h-full"
           preserveAspectRatio="xMidYMid meet"
         >
-          {/* 背景の円弧 */}
           <path
             d="M 10 110 A 100 100 0 0 1 210 110"
             fill="none"
@@ -84,7 +81,6 @@ const Dashboard = () => {
             strokeWidth="8"
             strokeLinecap="round"
           />
-          {/* 進捗の円弧 */}
           <path
             d="M 10 110 A 100 100 0 0 1 210 110"
             fill="none"
@@ -99,14 +95,12 @@ const Dashboard = () => {
             }
             className="transition-all duration-1000 ease-out"
           />
-          {/* 目盛り */}
           {[0, 25, 50, 75, 100].map((tick) => {
             const angle = (tick / 100) * Math.PI;
             const x1 = 110 + 90 * Math.cos(angle);
             const y1 = 110 - 90 * Math.sin(angle);
             const x2 = 110 + 80 * Math.cos(angle);
             const y2 = 110 - 80 * Math.sin(angle);
-
             return (
               <line
                 key={tick}
@@ -120,7 +114,6 @@ const Dashboard = () => {
             );
           })}
         </svg>
-        {/* 中央の数値 */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="text-sm text-gray-600">{label}</div>
           <div className="text-4xl font-bold text-gray-800">
@@ -131,7 +124,6 @@ const Dashboard = () => {
     );
   };
 
-  // チャート設定
   const chartConfig = {
     actual: {
       label: "実測値",
@@ -143,23 +135,39 @@ const Dashboard = () => {
     },
   };
 
-  // 現在時刻の表示
-  const currentTime = new Date().toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const [currentTime, setCurrentTime] = useState<string>(
+    new Date().toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  );
+
+  const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
 
   useEffect(() => {
-    // 初期選択: 最初の施設を選択
     if (places.length > 0 && selectedPlaceId === null) {
       setSelectedPlaceId(places[0].id);
     }
   }, [places, selectedPlaceId]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString("ja-JP", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+      setCurrentTimestamp(now.getTime());
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* ヘッダー */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
@@ -172,7 +180,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 施設選択 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -217,9 +224,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* メインダッシュボード */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 現在の混雑度 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -252,7 +257,6 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          {/* 統計情報 */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -307,7 +311,6 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* 時系列グラフ */}
         <Card>
           <CardHeader>
             <CardTitle>混雑度の推移</CardTitle>
@@ -350,6 +353,16 @@ const Dashboard = () => {
                         tickLine={false}
                         axisLine={false}
                         className="text-xs"
+                        type="number"
+                        scale="time"
+                        domain={["dataMin", "dataMax"]}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return date.toLocaleTimeString("ja-JP", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          });
+                        }}
                       />
                       <YAxis
                         tickLine={false}
@@ -359,6 +372,12 @@ const Dashboard = () => {
                         tickFormatter={(value) => `${value}%`}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
+                      <ReferenceLine
+                        x={currentTimestamp}
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
+                      />
                       <Line
                         type="monotone"
                         dataKey="actual"
