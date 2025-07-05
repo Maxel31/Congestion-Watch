@@ -113,4 +113,16 @@ weather_scheduler.log
 *.pyc
 .pytest_cache/
 
+# Machine Learning Models and Results
+ml/models/
+ml/test_models/
+ml/predictions/
+ml/*.pkl
+ml/*.joblib
+ml/training_results_*.json
+ml/place_*.json
+ml/htmlcov/
+ml/coverage.xml
+
+# Database data
 /db-data
