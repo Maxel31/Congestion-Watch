@@ -34,34 +34,24 @@ services:
       - "8001:8001"
     volumes:
       - ./ml:/app
-      - ml_models:/app/models
-      - ml_logs:/app/logs
     environment:
-      - ENV=development
-      - ML_PORT=8001
+      - PYTHON_ENV=development
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - AUTO_START_SCHEDULER=true
+      - ML_PORT=8001
+      - ENV=development
       - LOG_LEVEL=INFO
-      - MODEL_RETRAIN_HOUR=12
-      - PREDICTION_INTERVAL_MINUTES=5
+    command: ["uv", "run", "python", "main.py", "--server"]
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    restart: unless-stopped
 
   postgres:
     image: postgres:13
     container_name: postgresql
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?err}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
-      POSTGRES_DB: ${POSTGRES_DB:?err}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       TZ: "Asia/Tokyo"
     ports:
       - "5432:5432"
@@ -69,15 +59,9 @@ services:
       - ./database/schema:/docker-entrypoint-initdb.d
       - ./db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 3s
       retries: 3
-
-volumes:
-  ml_models:
-    driver: local
-  ml_logs:
-    driver: local
 
 networks:
   default:
