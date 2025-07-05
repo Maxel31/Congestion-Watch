@@ -5,3 +5,6 @@ CREATE TABLE IF NOT EXISTS prediction_model (
     model_params JSONB NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- インデックス
+CREATE INDEX IF NOT EXISTS idx_prediction_model_sensor_id ON prediction_model(sensor_id);

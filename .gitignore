@@ -112,3 +112,5 @@ weather_scheduler.log
 # Python environment and cache
 *.pyc
 .pytest_cache/
+
+/db-data

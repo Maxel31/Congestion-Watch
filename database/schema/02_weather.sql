@@ -5,3 +5,6 @@ CREATE TABLE IF NOT EXISTS weather (
     weather VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- インデックス
+CREATE INDEX IF NOT EXISTS idx_weather_datetime ON weather(datetime);
