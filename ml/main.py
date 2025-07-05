@@ -6,7 +6,7 @@ import argparse
 import logging
 from datetime import datetime
 
-from config import config
+from src.config import config
 from src.database import get_db
 from src.model import CongestionPredictionModel
 
