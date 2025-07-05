@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
@@ -184,15 +178,12 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              施設混雑度モニター
+              Congestion Watch
             </h1>
-            <p className="text-gray-600 mt-1">
-              リアルタイムの混雑状況と予測を表示
-            </p>
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Clock className="w-4 h-4" />
-            <span>最終更新: {currentTime}</span>
+            <span>{currentTime}</span>
           </div>
         </div>
 
@@ -329,9 +320,6 @@ const Dashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>混雑度の推移</CardTitle>
-            <CardDescription>
-              実測値と予測値の時系列データ（本日）
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {placeDetailLoading ? (
@@ -362,49 +350,54 @@ const Dashboard = () => {
                     <span className="text-sm text-gray-600">予測値</span>
                   </div>
                 </div>
-                <ChartContainer config={chartConfig} className="h-96">
-                  <LineChart data={timeSeriesData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="time"
-                      tickLine={false}
-                      axisLine={false}
-                      className="text-xs"
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      className="text-xs"
-                      domain={[0, 100]}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line
-                      type="monotone"
-                      dataKey="actual"
-                      stroke="var(--color-actual)"
-                      strokeWidth={3}
-                      dot={{
-                        fill: "var(--color-actual)",
-                        strokeWidth: 2,
-                        r: 4,
-                      }}
-                      connectNulls={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="predicted"
-                      stroke="var(--color-predicted)"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={{
-                        fill: "var(--color-predicted)",
-                        strokeWidth: 2,
-                        r: 3,
-                      }}
-                    />
-                  </LineChart>
-                </ChartContainer>
+                <div className="overflow-x-auto">
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-96 min-w-[800px]"
+                  >
+                    <LineChart data={timeSeriesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="time"
+                        tickLine={false}
+                        axisLine={false}
+                        className="text-xs"
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        className="text-xs"
+                        domain={[0, 100]}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="actual"
+                        stroke="var(--color-actual)"
+                        strokeWidth={3}
+                        dot={{
+                          fill: "var(--color-actual)",
+                          strokeWidth: 2,
+                          r: 4,
+                        }}
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="predicted"
+                        stroke="var(--color-predicted)"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{
+                          fill: "var(--color-predicted)",
+                          strokeWidth: 2,
+                          r: 3,
+                        }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                </div>
               </>
             )}
           </CardContent>
