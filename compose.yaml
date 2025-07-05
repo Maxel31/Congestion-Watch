@@ -23,8 +23,15 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      - GO_ENV=development
-      - ML_SERVICE_URL=http://ml:5000
+      GO_ENV: ${ENV}
+      ML_SERVICE_URL: http://ml:5000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:?err}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      POSTGRES_DB: ${POSTGRES_DB:?err}
+    depends_on:
+      - postgres
 
   ml:
     build:

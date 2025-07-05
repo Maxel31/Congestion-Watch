@@ -2,6 +2,12 @@ FROM golang:1.24.2-alpine
 
 WORKDIR /app
 
+# gitとbashをインストール（airの依存関係）
+RUN apk add --no-cache git bash
+
+# airをインストール
+RUN go install github.com/air-verse/air@latest
+
 # 依存関係管理のためのファイルをコピー
 COPY backend/go.mod backend/go.sum ./
 
@@ -11,5 +17,5 @@ RUN go mod download
 # アプリケーションのコードをコピー
 COPY backend/ ./
 
-# アプリケーションのビルドと実行
-CMD ["go", "run", "main.go"]
+# airでホットリロードを有効にして実行
+CMD ["air", "-c", ".air.toml"]
