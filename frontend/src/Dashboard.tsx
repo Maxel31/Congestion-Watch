@@ -69,20 +69,20 @@ const Dashboard = () => {
   };
 
   // スピードメータコンポーネント
-  const SpeedMeter = ({
-    value,
-    size = 200,
-  }: {
-    value: number;
-    size?: number;
-  }) => {
+  const SpeedMeter = ({ value, size }: { value?: number; size: number }) => {
     const center = size / 2;
     const radius = size / 2 - 20;
     const circumference = Math.PI * radius;
     const strokeDasharray = circumference;
-    const strokeDashoffset = circumference - (value / 100) * circumference;
+    const strokeDashoffset =
+      value !== undefined
+        ? circumference - (value / 100) * circumference
+        : circumference;
 
-    const { color, label } = getCrowdnessInfo(value);
+    const { color, label } =
+      value !== undefined
+        ? getCrowdnessInfo(value)
+        : { color: "#9ca3af", label: "不明" };
 
     return (
       <div className="flex flex-col items-center">
@@ -142,10 +142,10 @@ const Dashboard = () => {
           </svg>
           {/* 中央の数値 */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-4xl font-bold text-gray-800 mt-8">
-              {value}%
+            <div className="text-sm text-gray-600">{label}</div>
+            <div className="text-4xl font-bold text-gray-800">
+              {value !== undefined ? `${value}%` : "不明"}
             </div>
-            <div className="text-sm text-gray-600 mt-1">{label}</div>
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@ const Dashboard = () => {
   }, [places, selectedPlaceId]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* ヘッダー */}
         <div className="flex items-center justify-between">
@@ -250,7 +250,6 @@ const Dashboard = () => {
                 <Users className="w-5 h-5 mr-2" />
                 現在の混雑度 - {selectedPlace?.name || "選択してください"}
               </CardTitle>
-              <CardDescription>リアルタイムの混雑状況</CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
               {placeDetailLoading ? (
@@ -264,7 +263,14 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <SpeedMeter value={30} size={250} />
+                <SpeedMeter
+                  value={
+                    placeDetail?.timeSeries
+                      .filter((series) => series.actualScore !== undefined)
+                      .slice(-1)[0].actualScore
+                  }
+                  size={250}
+                />
               )}
             </CardContent>
           </Card>
