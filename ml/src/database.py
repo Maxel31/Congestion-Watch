@@ -153,7 +153,7 @@ class Weather(Base):  # type: ignore
 
 
 @contextmanager
-def get_db() -> Generator[Session, None, None]:
+def get_db() -> Generator[Session]:
     """データベースセッションのコンテキストマネージャー"""
     import os
 
