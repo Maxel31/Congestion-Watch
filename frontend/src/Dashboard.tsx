@@ -63,38 +63,23 @@ const Dashboard = () => {
   };
 
   // スピードメータコンポーネント
-  const SpeedMeter = ({ value, size }: { value?: number; size: number }) => {
-    const center = size / 2;
-    const radius = size / 2 - 20;
-    const circumference = Math.PI * radius;
-    const strokeDasharray = circumference;
-    const strokeDashoffset =
-      value !== undefined
-        ? circumference - (value / 100) * circumference
-        : circumference;
-
+  const SpeedMeter = ({ value }: { value?: number }) => {
     const { color, label } =
       value !== undefined
         ? getCrowdnessInfo(value)
         : { color: "#9ca3af", label: "不明" };
 
     return (
-      <div className="flex flex-col items-center">
-        <div
-          className="relative"
-          style={{ width: size, height: size / 2 + 40 }}
-        >
+      <div className="flex flex-col items-center w-full h-full">
+        <div className="relative w-full h-full flex items-center justify-center">
           <svg
-            width={size}
-            height={size / 2 + 40}
-            className="transform rotate-180"
+            viewBox="0 0 250 165"
+            className="transform rotate-180 w-full h-full"
             style={{ overflow: "visible" }}
           >
             {/* 背景の円弧 */}
             <path
-              d={`M 20 ${center} A ${radius} ${radius} 0 0 1 ${
-                size - 20
-              } ${center}`}
+              d="M 20 125 A 105 105 0 0 1 230 125"
               fill="none"
               stroke="#e5e7eb"
               strokeWidth="8"
@@ -102,24 +87,26 @@ const Dashboard = () => {
             />
             {/* 進捗の円弧 */}
             <path
-              d={`M 20 ${center} A ${radius} ${radius} 0 0 1 ${
-                size - 20
-              } ${center}`}
+              d="M 20 125 A 105 105 0 0 1 230 125"
               fill="none"
               stroke={color}
               strokeWidth="8"
               strokeLinecap="round"
-              strokeDasharray={strokeDasharray}
-              strokeDashoffset={strokeDashoffset}
+              strokeDasharray={Math.PI * 105}
+              strokeDashoffset={
+                value !== undefined
+                  ? Math.PI * 105 - (value / 100) * Math.PI * 105
+                  : Math.PI * 105
+              }
               className="transition-all duration-1000 ease-out"
             />
             {/* 目盛り */}
             {[0, 25, 50, 75, 100].map((tick) => {
               const angle = (tick / 100) * Math.PI;
-              const x1 = center + (radius - 10) * Math.cos(angle);
-              const y1 = center - (radius - 10) * Math.sin(angle);
-              const x2 = center + (radius - 20) * Math.cos(angle);
-              const y2 = center - (radius - 20) * Math.sin(angle);
+              const x1 = 125 + 95 * Math.cos(angle);
+              const y1 = 125 - 95 * Math.sin(angle);
+              const x2 = 125 + 85 * Math.cos(angle);
+              const y2 = 125 - 85 * Math.sin(angle);
 
               return (
                 <line
@@ -254,14 +241,15 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <SpeedMeter
-                  value={
-                    placeDetail?.timeSeries
-                      .filter((series) => series.actualScore !== undefined)
-                      .slice(-1)[0].actualScore
-                  }
-                  size={250}
-                />
+                <div className="h-64 w-full">
+                  <SpeedMeter
+                    value={
+                      placeDetail?.timeSeries
+                        .filter((d) => d.actualScore !== undefined)
+                        .slice(-1)[0].actualScore
+                    }
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
@@ -279,7 +267,12 @@ const Dashboard = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">現在の混雑度</span>
                   <span className="text-2xl font-bold text-gray-900">
-                    {30}%
+                    {
+                      placeDetail?.timeSeries
+                        .filter((d) => d.actualScore !== undefined)
+                        .slice(-1)[0].actualScore
+                    }
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
