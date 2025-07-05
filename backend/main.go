@@ -54,6 +54,21 @@ type Weather struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type CloudData struct {
+	PredictedScore *int      `json:"predicted_score"`
+	ActualScore    *int      `json:"actual_score"`
+	TargetDatetime time.Time `json:"target_datetime"`
+	PlaceID        int       `json:"place_id"`
+}
+
+type CongestionData struct {
+	PlaceID          int       `json:"place_id"`
+	PlaceName        string    `json:"place_name"`
+	TargetDatetime   time.Time `json:"target_datetime"`
+	ActualScore      *int      `json:"actual_score"`
+	PredictedScore   *int      `json:"predicted_score"`
+}
+
 func connectDB() (*sql.DB, error) {
 	// Docker環境では環境変数を直接使用するため、.envファイルの読み込みは不要
 	_ = godotenv.Load() // エラーを無視
@@ -178,6 +193,57 @@ func getLatestWeather(db *sql.DB) ([]Weather, error) {
 	return weather, nil
 }
 
+func getCloudDataByDate(db *sql.DB, targetDate string) ([]CloudData, error) {
+	query := `
+		SELECT 
+			ps.score as predicted_score,
+			acs.score as actual_score,
+			ps.target_datetime,
+			ps.place_id
+		FROM (
+			SELECT DISTINCT ON (place_id, target_datetime)
+				place_id,
+				target_datetime,
+				score
+			FROM predicted_score
+			WHERE DATE(target_datetime) = DATE($1)
+			ORDER BY place_id, target_datetime, created_at DESC
+		) ps
+		LEFT JOIN actual_score acs
+			ON ps.place_id = acs.place_id 
+			AND ps.target_datetime = acs.target_datetime
+		ORDER BY ps.place_id, ps.target_datetime
+	`
+	
+	rows, err := db.Query(query, targetDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var cloudData []CloudData
+	for rows.Next() {
+		var cd CloudData
+		var predictedScore, actualScore sql.NullInt64
+		err := rows.Scan(&predictedScore, &actualScore, &cd.TargetDatetime, &cd.PlaceID)
+		if err != nil {
+			return nil, err
+		}
+		
+		if predictedScore.Valid {
+			score := int(predictedScore.Int64)
+			cd.PredictedScore = &score
+		}
+		if actualScore.Valid {
+			score := int(actualScore.Int64)
+			cd.ActualScore = &score
+		}
+		
+		cloudData = append(cloudData, cd)
+	}
+	return cloudData, nil
+}
+
 func main() {
 	db, err := connectDB()
 	if err != nil {
@@ -195,12 +261,14 @@ func main() {
 	fmt.Printf("Found %d places:\n", len(places))
 	for _, place := range places {
 		fmt.Printf("- %s (ID: %d)\n", place.Name, place.ID)
+    fmt.Printf("%+v\n", place)
 		
 		actualScores, err := getActualScoresByPlace(db, place.ID)
 		if err != nil {
 			log.Printf("Failed to get actual scores for place %d: %v", place.ID, err)
 		} else {
 			fmt.Printf("  Actual scores: %d records\n", len(actualScores))
+      fmt.Printf("%+v\n", actualScores)
 		}
 
 		predictedScores, err := getPredictedScoresByPlace(db, place.ID)
@@ -208,6 +276,7 @@ func main() {
 			log.Printf("Failed to get predicted scores for place %d: %v", place.ID, err)
 		} else {
 			fmt.Printf("  Predicted scores: %d records\n", len(predictedScores))
+      fmt.Printf("%+v\n", predictedScores)
 		}
 	}
 
@@ -216,4 +285,23 @@ func main() {
 		log.Fatal("Failed to get weather:", err)
 	}
 	fmt.Printf("\nLatest weather records: %d\n", len(weather))
+	fmt.Printf("%+v\n", weather)
+
+	// 特定の日にちのcloud_dataを取得
+	targetDate := "2025-07-05"
+	cloudData, err := getCloudDataByDate(db, targetDate)
+	if err != nil {
+		log.Fatal("Failed to get cloud data:", err)
+	}
+	fmt.Printf("\nCloud data for %s: %d records\n", targetDate, len(cloudData))
+	for _, cd := range cloudData {
+		fmt.Printf("Place ID: %d, Time: %s", cd.PlaceID, cd.TargetDatetime.Format("2006-01-02 15:04:05"))
+		if cd.ActualScore != nil {
+			fmt.Printf(", Actual: %d", *cd.ActualScore)
+		}
+		if cd.PredictedScore != nil {
+			fmt.Printf(", Predicted: %d", *cd.PredictedScore)
+		}
+		fmt.Println()
+	}
 }
