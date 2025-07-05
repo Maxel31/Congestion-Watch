@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -11,61 +10,54 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { useFacilities, useFacilityDetail } from "@/hooks/useFacilities";
+import { usePlaceDetail, usePlaces } from "@/hooks/usePlaces";
 import { usePolling } from "@/hooks/usePolling";
 import { Clock, MapPin, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 const Dashboard = () => {
-  const [selectedFacilityId, setSelectedFacilityId] = useState<number | null>(
-    null
-  );
+  const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null);
   const {
-    facilities,
-    loading: facilitiesLoading,
-    error: facilitiesError,
-    refetch: refetchFacilities,
-  } = useFacilities();
+    places,
+    loading: placesLoading,
+    error: placesError,
+    refetch: refreshPlaces,
+  } = usePlaces();
   const {
-    facilityDetail,
-    loading: detailLoading,
-    error: detailError,
-    refetch: refetchDetail,
-  } = useFacilityDetail(selectedFacilityId || 0);
+    placeDetail,
+    loading: placeDetailLoading,
+    error: placeDetailError,
+    refetch: refreshPlaceDetail,
+  } = usePlaceDetail(selectedPlaceId || 0);
 
-  // 定期的なデータ更新
   const refreshInterval = parseInt(
     import.meta.env.VITE_REFRESH_INTERVAL || "30000",
     10
   );
   usePolling(
     () => {
-      refetchFacilities();
-      if (selectedFacilityId) {
-        refetchDetail();
+      refreshPlaces();
+      if (selectedPlaceId) {
+        refreshPlaceDetail();
       }
     },
     { interval: refreshInterval }
   );
 
-  // 現在選択されている施設の情報
-  const selectedFacility = facilities.find((f) => f.id === selectedFacilityId);
-  const currentCrowdness = selectedFacility?.currentScore || 0;
+  const selectedPlace = places.find((f) => f.id === selectedPlaceId);
 
-  // 時系列データをグラフ用に変換
   const timeSeriesData =
-    facilityDetail?.timeSeries.map((item) => ({
+    placeDetail?.timeSeries.map((item) => ({
       time: new Date(item.timestamp).toLocaleTimeString("ja-JP", {
         hour: "2-digit",
         minute: "2-digit",
       }),
-      actual: item.actualScore > 0 ? item.actualScore : null,
+      actual: item.actualScore || null,
       predicted: item.predictedScore || null,
       hour: new Date(item.timestamp).getHours(),
     })) || [];
 
-  // 混雑度に基づく色とラベル
   const getCrowdnessInfo = (value: number) => {
     if (value <= 30)
       return { color: "#22c55e", label: "空いている", bgColor: "bg-green-100" };
@@ -180,10 +172,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     // 初期選択: 最初の施設を選択
-    if (facilities.length > 0 && selectedFacilityId === null) {
-      setSelectedFacilityId(facilities[0].id);
+    if (places.length > 0 && selectedPlaceId === null) {
+      setSelectedPlaceId(places[0].id);
     }
-  }, [facilities, selectedFacilityId]);
+  }, [places, selectedPlaceId]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -213,45 +205,34 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {facilitiesLoading ? (
+            {placesLoading ? (
               <div className="flex justify-center items-center h-32">
                 <div className="text-gray-500">読み込み中...</div>
               </div>
-            ) : facilitiesError ? (
+            ) : placesError ? (
               <div className="flex justify-center items-center h-32">
                 <div className="text-red-500">
-                  エラー: {facilitiesError.message}
+                  エラー: {placesError.message}
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {facilities.map((facility) => {
-                  const { label, bgColor } = getCrowdnessInfo(
-                    facility.currentScore
-                  );
+                {places.map((place) => {
                   return (
                     <button
-                      key={facility.id}
-                      onClick={() => setSelectedFacilityId(facility.id)}
+                      key={place.id}
+                      onClick={() => setSelectedPlaceId(place.id)}
                       className={`p-4 rounded-lg border-2 transition-all ${
-                        selectedFacilityId === facility.id
+                        selectedPlaceId === place.id
                           ? "border-blue-500 bg-blue-50"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between">
                         <h3 className="font-medium text-gray-900">
-                          {facility.name}
+                          {place.name}
                         </h3>
-                        <Badge variant="secondary" className={bgColor}>
-                          {facility.currentScore}%
-                        </Badge>
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="w-4 h-4 mr-1" />
-                        <span>定員: {facility.capacity}名</span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">{label}</div>
                     </button>
                   );
                 })}
@@ -267,23 +248,23 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Users className="w-5 h-5 mr-2" />
-                現在の混雑度 - {selectedFacility?.name || "選択してください"}
+                現在の混雑度 - {selectedPlace?.name || "選択してください"}
               </CardTitle>
               <CardDescription>リアルタイムの混雑状況</CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
-              {detailLoading ? (
+              {placeDetailLoading ? (
                 <div className="flex justify-center items-center h-64">
                   <div className="text-gray-500">読み込み中...</div>
                 </div>
-              ) : detailError ? (
+              ) : placeDetailError ? (
                 <div className="flex justify-center items-center h-64">
                   <div className="text-red-500">
-                    エラー: {detailError.message}
+                    エラー: {placeDetailError.message}
                   </div>
                 </div>
               ) : (
-                <SpeedMeter value={currentCrowdness} size={250} />
+                <SpeedMeter value={30} size={250} />
               )}
             </CardContent>
           </Card>
@@ -301,7 +282,7 @@ const Dashboard = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">現在の混雑度</span>
                   <span className="text-2xl font-bold text-gray-900">
-                    {currentCrowdness}%
+                    {30}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -309,9 +290,11 @@ const Dashboard = () => {
                     今日の最高混雑度
                   </span>
                   <span className="text-lg font-semibold text-red-600">
-                    {facilityDetail
+                    {placeDetail
                       ? Math.max(
-                          ...facilityDetail.timeSeries.map((d) => d.actualScore)
+                          ...placeDetail.timeSeries.map(
+                            (d) => d.actualScore || 0
+                          )
                         )
                       : 0}
                     %
@@ -320,21 +303,15 @@ const Dashboard = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">平均混雑度</span>
                   <span className="text-lg font-semibold text-blue-600">
-                    {facilityDetail
-                      ? Math.round(
-                          facilityDetail.timeSeries.reduce(
-                            (sum, d) => sum + d.actualScore,
+                    {placeDetail
+                      ? (
+                          placeDetail.timeSeries.reduce(
+                            (sum, d) => sum + (d.actualScore || 0),
                             0
-                          ) / facilityDetail.timeSeries.length
-                        )
+                          ) / placeDetail.timeSeries.length
+                        ).toFixed(1)
                       : 0}
                     %
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">定員</span>
-                  <span className="text-lg font-semibold text-orange-600">
-                    {selectedFacility?.capacity || 0}名
                   </span>
                 </div>
               </div>
@@ -351,14 +328,14 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {detailLoading ? (
+            {placeDetailLoading ? (
               <div className="flex justify-center items-center h-96">
                 <div className="text-gray-500">読み込み中...</div>
               </div>
-            ) : detailError ? (
+            ) : placeDetailError ? (
               <div className="flex justify-center items-center h-96">
                 <div className="text-red-500">
-                  エラー: {detailError.message}
+                  エラー: {placeDetailError.message}
                 </div>
               </div>
             ) : (

@@ -1,27 +1,23 @@
-export interface Facility {
+export interface Place {
   id: number;
   name: string;
-  currentScore: number;
-  capacity: number;
-  occupancyRate: number;
 }
 
-export interface TimeSeriesData {
+export interface TimeSeries {
   timestamp: string;
-  actualScore: number;
+  actualScore?: number;
   predictedScore?: number;
 }
 
-export interface FacilityDetail {
-  facility: Facility;
-  timeSeries: TimeSeriesData[];
+export interface PlaceDetail {
+  place: Place;
+  timeSeries: TimeSeries[];
 }
 
-export interface FacilityListResponse {
-  facilities: Facility[];
-  lastUpdated: string;
+export interface PlaceListResponse {
+  places: Place[];
 }
 
-export interface FacilityDetailResponse {
-  facilityDetail: FacilityDetail;
+export interface PlaceDetailResponse {
+  placeDetail: PlaceDetail;
 }
