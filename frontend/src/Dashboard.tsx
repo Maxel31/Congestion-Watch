@@ -11,39 +11,62 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { useFacilities, useFacilityDetail } from "@/hooks/useFacilities";
+import { usePolling } from "@/hooks/usePolling";
 import { Clock, MapPin, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 const Dashboard = () => {
-  const [currentCrowdness, setCurrentCrowdness] = useState(65);
-  const [selectedFacility, setSelectedFacility] = useState("メインホール");
+  const [selectedFacilityId, setSelectedFacilityId] = useState<number | null>(
+    null
+  );
+  const {
+    facilities,
+    loading: facilitiesLoading,
+    error: facilitiesError,
+    refetch: refetchFacilities,
+  } = useFacilities();
+  const {
+    facilityDetail,
+    loading: detailLoading,
+    error: detailError,
+    refetch: refetchDetail,
+  } = useFacilityDetail(selectedFacilityId || 0);
 
-  // サンプルデータ
-  const timeSeriesData = [
-    { time: "9:00", actual: 20, predicted: 25, hour: 9 },
-    { time: "10:00", actual: 35, predicted: 40, hour: 10 },
-    { time: "11:00", actual: 45, predicted: 50, hour: 11 },
-    { time: "12:00", actual: 75, predicted: 70, hour: 12 },
-    { time: "13:00", actual: 85, predicted: 80, hour: 13 },
-    { time: "14:00", actual: 65, predicted: 75, hour: 14 },
-    { time: "15:00", actual: null, predicted: 60, hour: 15 },
-    { time: "16:00", actual: null, predicted: 70, hour: 16 },
-    { time: "17:00", actual: null, predicted: 80, hour: 17 },
-    { time: "18:00", actual: null, predicted: 90, hour: 18 },
-    { time: "19:00", actual: null, predicted: 75, hour: 19 },
-    { time: "20:00", actual: null, predicted: 45, hour: 20 },
-  ];
+  // 定期的なデータ更新
+  const refreshInterval = parseInt(
+    import.meta.env.VITE_REFRESH_INTERVAL || "30000",
+    10
+  );
+  usePolling(
+    () => {
+      refetchFacilities();
+      if (selectedFacilityId) {
+        refetchDetail();
+      }
+    },
+    { interval: refreshInterval }
+  );
 
-  const facilities = [
-    { name: "メインホール", crowdness: 65, capacity: 200 },
-    { name: "会議室A", crowdness: 30, capacity: 50 },
-    { name: "会議室B", crowdness: 80, capacity: 30 },
-    { name: "カフェテリア", crowdness: 45, capacity: 100 },
-  ];
+  // 現在選択されている施設の情報
+  const selectedFacility = facilities.find((f) => f.id === selectedFacilityId);
+  const currentCrowdness = selectedFacility?.currentScore || 0;
+
+  // 時系列データをグラフ用に変換
+  const timeSeriesData =
+    facilityDetail?.timeSeries.map((item) => ({
+      time: new Date(item.timestamp).toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      actual: item.actualScore > 0 ? item.actualScore : null,
+      predicted: item.predictedScore || null,
+      hour: new Date(item.timestamp).getHours(),
+    })) || [];
 
   // 混雑度に基づく色とラベル
-  const getCrowdnessInfo = (value) => {
+  const getCrowdnessInfo = (value: number) => {
     if (value <= 30)
       return { color: "#22c55e", label: "空いている", bgColor: "bg-green-100" };
     if (value <= 60)
@@ -54,7 +77,13 @@ const Dashboard = () => {
   };
 
   // スピードメータコンポーネント
-  const SpeedMeter = ({ value, size = 200 }) => {
+  const SpeedMeter = ({
+    value,
+    size = 200,
+  }: {
+    value: number;
+    size?: number;
+  }) => {
     const center = size / 2;
     const radius = size / 2 - 20;
     const circumference = Math.PI * radius;
@@ -150,12 +179,11 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    // 選択された施設の混雑度を更新
-    const facility = facilities.find((f) => f.name === selectedFacility);
-    if (facility) {
-      setCurrentCrowdness(facility.crowdness);
+    // 初期選択: 最初の施設を選択
+    if (facilities.length > 0 && selectedFacilityId === null) {
+      setSelectedFacilityId(facilities[0].id);
     }
-  }, [selectedFacility]);
+  }, [facilities, selectedFacilityId]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -185,38 +213,50 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {facilities.map((facility) => {
-                const { color, label, bgColor } = getCrowdnessInfo(
-                  facility.crowdness
-                );
-                return (
-                  <button
-                    key={facility.name}
-                    onClick={() => setSelectedFacility(facility.name)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      selectedFacility === facility.name
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-gray-900">
-                        {facility.name}
-                      </h3>
-                      <Badge variant="secondary" className={bgColor}>
-                        {facility.crowdness}%
-                      </Badge>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Users className="w-4 h-4 mr-1" />
-                      <span>定員: {facility.capacity}名</span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">{label}</div>
-                  </button>
-                );
-              })}
-            </div>
+            {facilitiesLoading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="text-gray-500">読み込み中...</div>
+              </div>
+            ) : facilitiesError ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="text-red-500">
+                  エラー: {facilitiesError.message}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {facilities.map((facility) => {
+                  const { label, bgColor } = getCrowdnessInfo(
+                    facility.currentScore
+                  );
+                  return (
+                    <button
+                      key={facility.id}
+                      onClick={() => setSelectedFacilityId(facility.id)}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        selectedFacilityId === facility.id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium text-gray-900">
+                          {facility.name}
+                        </h3>
+                        <Badge variant="secondary" className={bgColor}>
+                          {facility.currentScore}%
+                        </Badge>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Users className="w-4 h-4 mr-1" />
+                        <span>定員: {facility.capacity}名</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">{label}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -227,12 +267,24 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Users className="w-5 h-5 mr-2" />
-                現在の混雑度 - {selectedFacility}
+                現在の混雑度 - {selectedFacility?.name || "選択してください"}
               </CardTitle>
               <CardDescription>リアルタイムの混雑状況</CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center">
-              <SpeedMeter value={currentCrowdness} size={250} />
+              {detailLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="text-gray-500">読み込み中...</div>
+                </div>
+              ) : detailError ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="text-red-500">
+                    エラー: {detailError.message}
+                  </div>
+                </div>
+              ) : (
+                <SpeedMeter value={currentCrowdness} size={250} />
+              )}
             </CardContent>
           </Card>
 
@@ -257,21 +309,32 @@ const Dashboard = () => {
                     今日の最高混雑度
                   </span>
                   <span className="text-lg font-semibold text-red-600">
-                    85%
+                    {facilityDetail
+                      ? Math.max(
+                          ...facilityDetail.timeSeries.map((d) => d.actualScore)
+                        )
+                      : 0}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">平均混雑度</span>
                   <span className="text-lg font-semibold text-blue-600">
-                    58%
+                    {facilityDetail
+                      ? Math.round(
+                          facilityDetail.timeSeries.reduce(
+                            (sum, d) => sum + d.actualScore,
+                            0
+                          ) / facilityDetail.timeSeries.length
+                        )
+                      : 0}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">
-                    次の混雑ピーク予測
-                  </span>
+                  <span className="text-sm text-gray-600">定員</span>
                   <span className="text-lg font-semibold text-orange-600">
-                    18:00 (90%)
+                    {selectedFacility?.capacity || 0}名
                   </span>
                 </div>
               </div>
@@ -288,57 +351,79 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4 flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">実測値</span>
+            {detailLoading ? (
+              <div className="flex justify-center items-center h-96">
+                <div className="text-gray-500">読み込み中...</div>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 bg-yellow-500 rounded-full border-2 border-yellow-500"
-                  style={{
-                    backgroundImage:
-                      "repeating-linear-gradient(45deg, transparent, transparent 2px, white 2px, white 4px)",
-                  }}
-                ></div>
-                <span className="text-sm text-gray-600">予測値</span>
+            ) : detailError ? (
+              <div className="flex justify-center items-center h-96">
+                <div className="text-red-500">
+                  エラー: {detailError.message}
+                </div>
               </div>
-            </div>
-            <ChartContainer config={chartConfig} className="h-96">
-              <LineChart data={timeSeriesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="time"
-                  tickLine={false}
-                  axisLine={false}
-                  className="text-xs"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  className="text-xs"
-                  domain={[0, 100]}
-                  tickFormatter={(value) => `${value}%`}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line
-                  type="monotone"
-                  dataKey="actual"
-                  stroke="var(--color-actual)"
-                  strokeWidth={3}
-                  dot={{ fill: "var(--color-actual)", strokeWidth: 2, r: 4 }}
-                  connectNulls={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="predicted"
-                  stroke="var(--color-predicted)"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={{ fill: "var(--color-predicted)", strokeWidth: 2, r: 3 }}
-                />
-              </LineChart>
-            </ChartContainer>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-gray-600">実測値</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 bg-yellow-500 rounded-full border-2 border-yellow-500"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(45deg, transparent, transparent 2px, white 2px, white 4px)",
+                      }}
+                    ></div>
+                    <span className="text-sm text-gray-600">予測値</span>
+                  </div>
+                </div>
+                <ChartContainer config={chartConfig} className="h-96">
+                  <LineChart data={timeSeriesData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="time"
+                      tickLine={false}
+                      axisLine={false}
+                      className="text-xs"
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      className="text-xs"
+                      domain={[0, 100]}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="actual"
+                      stroke="var(--color-actual)"
+                      strokeWidth={3}
+                      dot={{
+                        fill: "var(--color-actual)",
+                        strokeWidth: 2,
+                        r: 4,
+                      }}
+                      connectNulls={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="predicted"
+                      stroke="var(--color-predicted)"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{
+                        fill: "var(--color-predicted)",
+                        strokeWidth: 2,
+                        r: 3,
+                      }}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

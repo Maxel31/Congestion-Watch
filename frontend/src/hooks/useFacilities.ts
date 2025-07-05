@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Facility, FacilityDetail } from '@/types/api';
 import { mockFacilities, mockFacilityDetails } from '@/mocks/facilityData';
+import { apiService } from '@/services/api';
 
 interface UseFacilitiesReturn {
   facilities: Facility[];
@@ -19,14 +20,16 @@ export const useFacilities = (): UseFacilitiesReturn => {
     setError(null);
     
     try {
-      // TODO: 実際のAPI実装時にはここを置き換える
-      // const response = await fetch('/api/facilities');
-      // const data = await response.json();
-      // setFacilities(data.facilities);
-      
-      // モックデータの使用（API呼び出しをシミュレート）
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setFacilities(mockFacilities);
+      // 実際のAPI呼び出しを試行、失敗時はモックデータを使用
+      try {
+        const response = await apiService.getFacilities();
+        setFacilities(response.facilities);
+      } catch (apiError) {
+        console.warn('API呼び出しに失敗しました。モックデータを使用します:', apiError);
+        // モックデータの使用（API呼び出しをシミュレート）
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setFacilities(mockFacilities);
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch facilities'));
     } finally {
@@ -63,18 +66,20 @@ export const useFacilityDetail = (facilityId: number): UseFacilityDetailReturn =
     setError(null);
     
     try {
-      // TODO: 実際のAPI実装時にはここを置き換える
-      // const response = await fetch(`/api/facilities/${facilityId}`);
-      // const data = await response.json();
-      // setFacilityDetail(data.facilityDetail);
-      
-      // モックデータの使用（API呼び出しをシミュレート）
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const detail = mockFacilityDetails[facilityId];
-      if (!detail) {
-        throw new Error('Facility not found');
+      // 実際のAPI呼び出しを試行、失敗時はモックデータを使用
+      try {
+        const response = await apiService.getFacilityDetail(facilityId);
+        setFacilityDetail(response.facilityDetail);
+      } catch (apiError) {
+        console.warn('API呼び出しに失敗しました。モックデータを使用します:', apiError);
+        // モックデータの使用（API呼び出しをシミュレート）
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const detail = mockFacilityDetails[facilityId];
+        if (!detail) {
+          throw new Error('Facility not found');
+        }
+        setFacilityDetail(detail);
       }
-      setFacilityDetail(detail);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch facility detail'));
     } finally {
