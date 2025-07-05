@@ -28,14 +28,13 @@ class CongestionPredictionModel:
     """混雑度予測モデル"""
 
     def __init__(self, model_dir: str | None = None):
+        # 本番環境ではローカルファイル保存を無効化するため、model_dirは使用しない
         if model_dir is None:
             model_dir = config.MODEL_DIR
         self.model_dir = Path(model_dir)
-        self.model_dir.mkdir(exist_ok=True)
-
-        # 予測結果保存用ディレクトリを作成
-        self.predictions_dir = self.model_dir / "predictions"
-        self.predictions_dir.mkdir(exist_ok=True)
+        # 本番環境ではディレクトリ作成をスキップ
+        if config.is_development():
+            self.model_dir.mkdir(exist_ok=True)
 
         self.models: dict[
             int, RandomForestRegressor
@@ -66,17 +65,28 @@ class CongestionPredictionModel:
         db_manager = DatabaseManager()
         feature_engineer = FeatureEngineer(db)
 
-        # 全場所を取得
+        # 実測データが存在する場所のみを取得
+        from sqlalchemy import text
+        
+        # 実測データが存在する場所IDを取得
+        actual_places_result = db.execute(
+            text("SELECT DISTINCT place_id FROM actual_score ORDER BY place_id")
+        ).fetchall()
+        
+        if not actual_places_result:
+            logger.error("実測データが存在しません")
+            return {"status": "error", "message": "実測データが存在しません"}
+        
+        actual_place_ids = [row[0] for row in actual_places_result]
+        
+        # 実測データが存在する場所の情報を取得
         places = db_manager.get_all_places(db)
-
-        if not places:
-            logger.error("場所データが存在しません")
-            return {"status": "error", "message": "場所データが存在しません"}
+        actual_places = [place for place in places if place.id in actual_place_ids]
 
         results = {}
 
-        # 各場所ごとにモデルを訓練
-        for place in places:
+        # 実測データが存在する場所のみでモデルを訓練
+        for place in actual_places:
             logger.info(f"場所 {place.name} (ID: {place.id}) のモデル訓練開始")
 
             # 訓練データの準備
@@ -135,21 +145,21 @@ class CongestionPredictionModel:
                 f"MAE: {test_mae:.2f}, RMSE: {test_rmse:.2f}, R2: {test_r2:.3f}"
             )
 
-        # モデルをファイルに保存
-        self._save_models()
+        # 開発環境でのみモデルをファイルに保存
+        if config.is_development():
+            self._save_models()
 
         # データベースにモデル情報を保存
         self._save_model_info_to_db(
             db, db_manager, {int(k): v for k, v in results.items()}
         )
 
-        # 学習結果をファイルに保存
+        # 学習結果を返す
         train_result = {
             "status": "success",
             "trained_models": len(self.models),
             "results": results,
         }
-        self._save_training_results_to_file(train_result)
 
         return train_result
 
@@ -174,7 +184,11 @@ class CongestionPredictionModel:
         """
         # モデルが存在しない場合はロード
         if place_id not in self.models:
-            self._load_models()
+            if config.is_development():
+                self._load_models()
+            else:
+                # 本番環境ではデータベースからモデルを再構築
+                self._load_models_from_db(db, place_id)
 
         if place_id not in self.models:
             logger.error(f"場所ID {place_id} のモデルが存在しません")
@@ -206,13 +220,24 @@ class CongestionPredictionModel:
                 columns=["prediction_datetime"], errors="ignore"
             )
 
+            # 不要な特徴量を削除（訓練時にない特徴量）
+            extra_cols = set(X_pred_features.columns) - set(feature_cols)
+            if extra_cols:
+                logger.warning(f"不要な特徴量を削除: {extra_cols}")
+                X_pred_features = X_pred_features.drop(columns=list(extra_cols))
+
+            # 欠損している特徴量を追加
             missing_cols = set(feature_cols) - set(X_pred_features.columns)
             for col in missing_cols:
                 X_pred_features[col] = -1  # 欠損値として-1を設定
 
+            # 特徴量カラムの順序を訓練時と同じに揃える
             X_pred_features = X_pred_features.reindex(
                 columns=feature_cols, fill_value=-1
             )
+
+            logger.info(f"予測時の特徴量数: {len(X_pred_features.columns)}")
+            logger.info(f"訓練時の特徴量数: {len(feature_cols)}")
         else:
             X_pred_features = X_pred.drop(
                 columns=["prediction_datetime"], errors="ignore"
@@ -233,98 +258,58 @@ class CongestionPredictionModel:
                         round(max(0, predictions[idx]))
                     ),  # 負の値は0に
                     "confidence": self._calculate_confidence(
-                        model, X_pred_features.iloc[idx : idx + 1]
+                        model, X_pred_features.iloc[idx : idx + 1].values
                     ),
                 }
             )
 
-        # 予測結果をファイルに保存
-        self._save_predictions_to_file(place_id, target_datetime, results)
+        # 本番環境では予測結果のファイル保存を無効化
 
-        # データベース状態を記録（予測実行後）
-        self._save_database_status_after_prediction(db, place_id, target_datetime, len(results))
+        # 予測結果をデータベースに保存
+        self._save_predictions_to_db(db, place_id, results)
+
+        # 本番環境ではデータベース状態記録を無効化
 
         return results
 
-    def _save_predictions_to_file(
-        self,
-        place_id: int,
-        target_datetime: datetime,
-        predictions: list[dict[str, Any]],
-    ) -> None:
-        """予測結果をJSONファイルに保存"""
-        timestamp = target_datetime.strftime("%Y%m%d_%H%M%S")
-        filename = f"place_{place_id}_{timestamp}.json"
-        filepath = self.predictions_dir / filename
+    # 本番環境では予測結果のファイル保存を無効化
 
-        prediction_data = {
-            "place_id": place_id,
-            "prediction_timestamp": target_datetime.isoformat(),
-            "model_params": self.model_params,
-            "predictions": predictions,
-            "metadata": {
-                "total_predictions": len(predictions),
-                "feature_columns": self.feature_columns,
-                "saved_at": datetime.now().isoformat(),
-            },
-        }
+    # 本番環境では学習結果のファイル保存を無効化
 
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(prediction_data, f, indent=2, ensure_ascii=False)
+    # 本番環境ではデータベース状態記録を無効化
 
-        logger.info(f"予測結果を保存しました: {filepath}")
-
-    def _save_training_results_to_file(self, train_result: dict[str, Any]) -> None:
-        """学習結果をJSONファイルに保存"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"training_results_{timestamp}.json"
-        filepath = self.model_dir / filename
-
-        training_data = {
-            "training_timestamp": datetime.now().isoformat(),
-            "model_params": self.model_params,
-            "feature_columns": self.feature_columns,
-            "results": train_result,
-            "metadata": {
-                "saved_at": datetime.now().isoformat(),
-                "model_type": "RandomForestRegressor",
-            },
-        }
-
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(training_data, f, indent=2, ensure_ascii=False)
-
-        logger.info(f"学習結果を保存しました: {filepath}")
-
-    def _save_database_status_after_prediction(
-        self, db: Session, place_id: int, target_datetime: datetime, prediction_count: int
-    ) -> None:
-        """予測実行後のデータベース状態を記録"""
-        from .database import DatabaseManager
-
+    def _save_predictions_to_db(self, db: Session, place_id: int, predictions: list[dict[str, Any]]) -> None:
+        """予測結果をデータベースに保存"""
         db_manager = DatabaseManager()
 
-        # 予測前の状態
-        status_before = db_manager.get_database_status(db, f"BEFORE_PREDICTION_place_{place_id}")
+        # 現在のセンサーとモデルIDを取得
+        sensor = db.query(Sensor).filter(Sensor.place_id == place_id).first()
+        if not sensor:
+            logger.warning(f"場所ID {place_id} のセンサーが見つかりません")
+            return
 
-        # 予測実行（実際の保存は別で行われる）
+        # 最新のモデルIDを取得
+        latest_model = db_manager.get_latest_model(db, int(sensor.id))
+        if not latest_model:
+            logger.warning(f"センサーID {sensor.id} のモデルが見つかりません")
+            return
 
-        # 予測後の状態
-        status_after = db_manager.get_database_status(db, f"AFTER_PREDICTION_place_{place_id}")
+        # 予測結果をデータベース形式に変換
+        prediction_data = []
+        for pred in predictions:
+            prediction_data.append({
+                "model_id": latest_model.id,
+                "score": int(round(pred["predicted_score"])),
+                "place_id": place_id,
+                "target_datetime": pred["target_datetime"]
+            })
 
-        # ファイルに保存
-        timestamp = target_datetime.strftime("%Y%m%d_%H%M%S")
-
-        before_filepath = self.model_dir / f"db_status_before_prediction_place_{place_id}_{timestamp}.json"
-        after_filepath = self.model_dir / f"db_status_after_prediction_place_{place_id}_{timestamp}.json"
-
-        db_manager.save_database_status(db, status_before, str(before_filepath))
-        db_manager.save_database_status(db, status_after, str(after_filepath))
-
-        logger.info(f"データベース状態を記録しました: {before_filepath}, {after_filepath}")
+        # データベースに保存
+        saved_predictions = db_manager.save_predictions(db, prediction_data)
+        logger.info(f"予測結果をデータベースに保存しました: {len(saved_predictions)}件")
 
     def _calculate_confidence(
-        self, model: RandomForestRegressor, X: pd.DataFrame
+        self, model: RandomForestRegressor, X: np.ndarray | pd.DataFrame
     ) -> float:
         """
         予測の信頼度を計算（各決定木の予測のばらつきから）
@@ -395,6 +380,36 @@ class CongestionPredictionModel:
             self.model_params = metadata.get("model_params", self.model_params)
 
         logger.info(f"モデルをロードしました: {len(self.models)}個")
+
+    def _load_models_from_db(self, db: Session, place_id: int) -> None:
+        """本番環境でデータベースからモデルパラメータを取得してモデルを再構築"""
+        db_manager = DatabaseManager()
+
+        # センサーIDを取得
+        sensor = db.query(Sensor).filter(Sensor.place_id == place_id).first()
+        if not sensor:
+            logger.warning(f"場所ID {place_id} のセンサーが見つかりません")
+            return
+
+        # 最新のモデル情報を取得
+        latest_model = db_manager.get_latest_model(db, int(sensor.id))
+        if not latest_model:
+            logger.warning(f"センサーID {sensor.id} のモデルが見つかりません")
+            return
+
+        try:
+            # モデルパラメータを取得
+            model_params = latest_model.model_params
+            if isinstance(model_params, dict):
+                # モデルのハイパーパラメータを取得
+                self.feature_columns = model_params.get("feature_columns")
+
+                # 新しいモデルインスタンスを作成（本番環境では再訓練）
+                # 注：実際の本番環境では、モデル自体もDBに保存するか、再訓練が必要
+                logger.warning(f"本番環境でモデルパラメータを取得しましたが、モデル本体の再構築が必要です: 場所ID {place_id}")
+
+        except Exception as e:
+            logger.error(f"モデル情報の読み込みエラー: {e}")
 
     def _save_model_info_to_db(
         self,
