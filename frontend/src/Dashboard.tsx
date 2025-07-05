@@ -70,63 +70,61 @@ const Dashboard = () => {
         : { color: "#9ca3af", label: "不明" };
 
     return (
-      <div className="flex flex-col items-center w-full h-full">
-        <div className="relative w-full h-full flex items-center justify-center">
-          <svg
-            viewBox="0 0 250 165"
-            className="transform rotate-180 w-full h-full"
-            style={{ overflow: "visible" }}
-          >
-            {/* 背景の円弧 */}
-            <path
-              d="M 20 125 A 105 105 0 0 1 230 125"
-              fill="none"
-              stroke="#e5e7eb"
-              strokeWidth="8"
-              strokeLinecap="round"
-            />
-            {/* 進捗の円弧 */}
-            <path
-              d="M 20 125 A 105 105 0 0 1 230 125"
-              fill="none"
-              stroke={color}
-              strokeWidth="8"
-              strokeLinecap="round"
-              strokeDasharray={Math.PI * 105}
-              strokeDashoffset={
-                value !== undefined
-                  ? Math.PI * 105 - (value / 100) * Math.PI * 105
-                  : Math.PI * 105
-              }
-              className="transition-all duration-1000 ease-out"
-            />
-            {/* 目盛り */}
-            {[0, 25, 50, 75, 100].map((tick) => {
-              const angle = (tick / 100) * Math.PI;
-              const x1 = 125 + 95 * Math.cos(angle);
-              const y1 = 125 - 95 * Math.sin(angle);
-              const x2 = 125 + 85 * Math.cos(angle);
-              const y2 = 125 - 85 * Math.sin(angle);
+      <div className="relative w-full h-full">
+        <svg
+          viewBox="0 0 220 110"
+          className="w-full h-full"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          {/* 背景の円弧 */}
+          <path
+            d="M 10 100 A 100 100 0 0 1 210 100"
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          {/* 進捗の円弧 */}
+          <path
+            d="M 10 100 A 100 100 0 0 1 210 100"
+            fill="none"
+            stroke={color}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={Math.PI * 105}
+            strokeDashoffset={
+              value !== undefined
+                ? Math.PI * 105 - (value / 100) * Math.PI * 105
+                : Math.PI * 105
+            }
+            className="transition-all duration-1000 ease-out"
+          />
+          {/* 目盛り */}
+          {[0, 25, 50, 75, 100].map((tick) => {
+            const angle = (tick / 100) * Math.PI;
+            const x1 = 110 + 90 * Math.cos(angle);
+            const y1 = 100 - 90 * Math.sin(angle);
+            const x2 = 110 + 80 * Math.cos(angle);
+            const y2 = 100 - 80 * Math.sin(angle);
 
-              return (
-                <line
-                  key={tick}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke="#9ca3af"
-                  strokeWidth="2"
-                />
-              );
-            })}
-          </svg>
-          {/* 中央の数値 */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-sm text-gray-600">{label}</div>
-            <div className="text-4xl font-bold text-gray-800">
-              {value !== undefined ? `${value}%` : "不明"}
-            </div>
+            return (
+              <line
+                key={tick}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="#9ca3af"
+                strokeWidth="2"
+              />
+            );
+          })}
+        </svg>
+        {/* 中央の数値 */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-sm text-gray-600">{label}</div>
+          <div className="text-4xl font-bold text-gray-800">
+            {value !== undefined ? `${value}%` : "不明"}
           </div>
         </div>
       </div>
@@ -241,7 +239,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="h-64 w-full">
+                <div className="h-32 w-full">
                   <SpeedMeter
                     value={
                       placeDetail?.timeSeries
