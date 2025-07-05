@@ -84,7 +84,7 @@ const Dashboard = () => {
   const timeSeriesData = placeDetail?.timeSeries.length
     ? smoothPredictedData(
         placeDetail.timeSeries.map((item) => ({
-          time: new Date(item.timestamp).getTime(),
+          time: item.timestamp.getTime(),
           actual: item.actualScore || null,
           predicted: item.predictedScore || null,
         }))
@@ -154,7 +154,7 @@ const Dashboard = () => {
             );
           })}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center mt-8">
           <div className="text-sm text-gray-600">{label}</div>
           <div className="text-4xl font-bold text-gray-800">
             {value !== undefined ? `${value}%` : "不明"}
@@ -396,20 +396,24 @@ const Dashboard = () => {
                         type="number"
                         scale="time"
                         domain={["dataMin", "dataMax"]}
+                        // interval={0}
+                        ticks={Array.from({ length: 24 }, (_, i) => {
+                          const startOfDay = new Date();
+                          startOfDay.setHours(0, 0, 0, 0);
+                          return startOfDay.getTime() + i * 60 * 60 * 1000;
+                        })}
                         tickFormatter={(value) => {
                           const date = new Date(value);
-                          return date.toLocaleTimeString("ja-JP", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          });
+                          return date.getHours() + ":00";
                         }}
                       />
                       <YAxis
                         tickLine={false}
                         axisLine={false}
                         className="text-xs"
-                        domain={[0, 100]}
-                        tickFormatter={(value) => `${value}%`}
+                        domain={[0, 120]}
+                        tick={false}
+                        width={10}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <ReferenceLine
