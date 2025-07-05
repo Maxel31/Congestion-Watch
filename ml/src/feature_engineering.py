@@ -145,9 +145,13 @@ class FeatureEngineer:
         # 開始時刻を5分単位に切り上げ
         start_minute = (target_datetime.minute // 5 + 1) * 5
         if start_minute >= 60:
-            current_time = target_datetime.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            current_time = target_datetime.replace(
+                minute=0, second=0, microsecond=0
+            ) + timedelta(hours=1)
         else:
-            current_time = target_datetime.replace(minute=start_minute, second=0, microsecond=0)
+            current_time = target_datetime.replace(
+                minute=start_minute, second=0, microsecond=0
+            )
 
         end_time = target_datetime + timedelta(hours=prediction_hours)
 
@@ -236,7 +240,9 @@ class FeatureEngineer:
                 # トレンド（最近の変化傾向）
                 if len(recent_15m) >= 2:
                     recent_sorted = recent_15m.sort_values("target_datetime")
-                    features["past_15m_trend"] = recent_sorted["score"].iloc[-1] - recent_sorted["score"].iloc[0]
+                    features["past_15m_trend"] = (
+                        recent_sorted["score"].iloc[-1] - recent_sorted["score"].iloc[0]
+                    )
 
             # 直近1時間の統計
             cutoff_1h = pd.Timestamp(current_time) - pd.Timedelta(hours=1)

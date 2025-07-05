@@ -67,18 +67,18 @@ class CongestionPredictionModel:
 
         # 実測データが存在する場所のみを取得
         from sqlalchemy import text
-        
+
         # 実測データが存在する場所IDを取得
         actual_places_result = db.execute(
             text("SELECT DISTINCT place_id FROM actual_score ORDER BY place_id")
         ).fetchall()
-        
+
         if not actual_places_result:
             logger.error("実測データが存在しません")
             return {"status": "error", "message": "実測データが存在しません"}
-        
+
         actual_place_ids = [row[0] for row in actual_places_result]
-        
+
         # 実測データが存在する場所の情報を取得
         places = db_manager.get_all_places(db)
         actual_places = [place for place in places if place.id in actual_place_ids]
@@ -278,7 +278,9 @@ class CongestionPredictionModel:
 
     # 本番環境ではデータベース状態記録を無効化
 
-    def _save_predictions_to_db(self, db: Session, place_id: int, predictions: list[dict[str, Any]]) -> None:
+    def _save_predictions_to_db(
+        self, db: Session, place_id: int, predictions: list[dict[str, Any]]
+    ) -> None:
         """予測結果をデータベースに保存"""
         db_manager = DatabaseManager()
 
@@ -297,12 +299,14 @@ class CongestionPredictionModel:
         # 予測結果をデータベース形式に変換
         prediction_data = []
         for pred in predictions:
-            prediction_data.append({
-                "model_id": latest_model.id,
-                "score": int(round(pred["predicted_score"])),
-                "place_id": place_id,
-                "target_datetime": pred["target_datetime"]
-            })
+            prediction_data.append(
+                {
+                    "model_id": latest_model.id,
+                    "score": int(round(pred["predicted_score"])),
+                    "place_id": place_id,
+                    "target_datetime": pred["target_datetime"],
+                }
+            )
 
         # データベースに保存
         saved_predictions = db_manager.save_predictions(db, prediction_data)
@@ -406,7 +410,9 @@ class CongestionPredictionModel:
 
                 # 新しいモデルインスタンスを作成（本番環境では再訓練）
                 # 注：実際の本番環境では、モデル自体もDBに保存するか、再訓練が必要
-                logger.warning(f"本番環境でモデルパラメータを取得しましたが、モデル本体の再構築が必要です: 場所ID {place_id}")
+                logger.warning(
+                    f"本番環境でモデルパラメータを取得しましたが、モデル本体の再構築が必要です: 場所ID {place_id}"
+                )
 
         except Exception as e:
             logger.error(f"モデル情報の読み込みエラー: {e}")

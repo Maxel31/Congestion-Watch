@@ -255,11 +255,18 @@ class DatabaseManager:
         status: dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "prefix": prefix,
-            "tables": {}
+            "tables": {},
         }
 
         # 各テーブルのレコード数を取得
-        tables = ["place", "sensor", "prediction_model", "actual_score", "predicted_score", "weather"]
+        tables = [
+            "place",
+            "sensor",
+            "prediction_model",
+            "actual_score",
+            "predicted_score",
+            "weather",
+        ]
 
         for table in tables:
             try:
@@ -270,26 +277,37 @@ class DatabaseManager:
 
         # 最新のデータ情報
         try:
-            latest_actual = db.execute(text(
-                "SELECT target_datetime FROM actual_score ORDER BY target_datetime DESC LIMIT 1"
-            )).scalar()
-            status["latest_actual_data"] = latest_actual.isoformat() if latest_actual else None
+            latest_actual = db.execute(
+                text(
+                    "SELECT target_datetime FROM actual_score ORDER BY target_datetime DESC LIMIT 1"
+                )
+            ).scalar()
+            status["latest_actual_data"] = (
+                latest_actual.isoformat() if latest_actual else None
+            )
         except Exception:
             status["latest_actual_data"] = None
 
         try:
-            latest_prediction = db.execute(text(
-                "SELECT target_datetime FROM predicted_score ORDER BY target_datetime DESC LIMIT 1"
-            )).scalar()
-            status["latest_prediction_data"] = latest_prediction.isoformat() if latest_prediction else None
+            latest_prediction = db.execute(
+                text(
+                    "SELECT target_datetime FROM predicted_score ORDER BY target_datetime DESC LIMIT 1"
+                )
+            ).scalar()
+            status["latest_prediction_data"] = (
+                latest_prediction.isoformat() if latest_prediction else None
+            )
         except Exception:
             status["latest_prediction_data"] = None
 
         return status
 
     @staticmethod
-    def save_database_status(db: Session, status: dict[str, Any], filepath: str) -> None:
+    def save_database_status(
+        db: Session, status: dict[str, Any], filepath: str
+    ) -> None:
         """データベース状態をファイルに保存"""
         import json
+
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(status, f, indent=2, ensure_ascii=False)

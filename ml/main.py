@@ -34,12 +34,12 @@ def predict_models() -> None:
     with get_db() as db:
         # 実測データがある場所のみを対象とする
         from sqlalchemy import text
-        
+
         # 実測データが存在する場所IDを取得
         actual_places = db.execute(
             text("SELECT DISTINCT place_id FROM actual_score ORDER BY place_id")
         ).fetchall()
-        
+
         for place_row in actual_places:
             place_id = place_row[0]
             try:
@@ -47,7 +47,7 @@ def predict_models() -> None:
                     db=db,
                     place_id=place_id,
                     target_datetime=datetime.now(),
-                    hours_ahead=24
+                    hours_ahead=24,
                 )
                 logger.info(f"場所 {place_id} の予測完了: {len(predictions)} 件")
             except Exception as e:
@@ -59,7 +59,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="機械学習サービス")
     parser.add_argument("--train", action="store_true", help="モデルを訓練する")
     parser.add_argument("--predict", action="store_true", help="予測を実行する")
-    parser.add_argument("--server", action="store_true", help="サーバーモード（現在は非対応）")
+    parser.add_argument(
+        "--server", action="store_true", help="サーバーモード（現在は非対応）"
+    )
 
     args = parser.parse_args()
 
@@ -72,9 +74,10 @@ def main() -> None:
         logger.info("使用方法:")
         logger.info("  docker exec <container> uv run python main.py --train")
         logger.info("  docker exec <container> uv run python main.py --predict")
-        
+
         # コンテナを起動状態に保つ
         import time
+
         try:
             while True:
                 time.sleep(60)  # 1分間隔でスリープ
