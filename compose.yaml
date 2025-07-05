@@ -24,18 +24,36 @@ services:
       - ./backend:/app
     environment:
       - GO_ENV=development
-      - ML_SERVICE_URL=http://ml:5000
+      - ML_SERVICE_URL=http://ml:8001
 
   ml:
     build:
       context: .
       dockerfile: ml/docker/Dockerfile
     ports:
-      - "5050:5050"
+      - "8001:8001"
     volumes:
       - ./ml:/app
+      - ml_models:/app/models
+      - ml_logs:/app/logs
     environment:
-      - PYTHON_ENV=development
+      - ENV=development
+      - ML_PORT=8001
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - AUTO_START_SCHEDULER=true
+      - LOG_LEVEL=INFO
+      - MODEL_RETRAIN_HOUR=12
+      - PREDICTION_INTERVAL_MINUTES=5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
   postgres:
     image: postgres:13
@@ -54,6 +72,12 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 3s
       retries: 3
+
+volumes:
+  ml_models:
+    driver: local
+  ml_logs:
+    driver: local
 
 networks:
   default:
