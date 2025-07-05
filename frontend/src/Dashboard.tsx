@@ -44,12 +44,52 @@ const Dashboard = () => {
 
   const selectedPlace = places.find((f) => f.id === selectedPlaceId);
 
-  const timeSeriesData =
-    placeDetail?.timeSeries.map((item) => ({
-      time: new Date(item.timestamp).getTime(),
-      actual: item.actualScore || null,
-      predicted: item.predictedScore || null,
-    })) || [];
+  const smoothPredictedData = (
+    data: Array<{
+      time: number;
+      actual: number | null;
+      predicted: number | null;
+    }>
+  ) => {
+    const smoothedData = [...data];
+    const windowSize = 1;
+
+    for (let i = 0; i < smoothedData.length; i++) {
+      if (smoothedData[i].predicted !== null) {
+        const start = Math.max(0, i - Math.floor(windowSize / 2));
+        const end = Math.min(
+          smoothedData.length,
+          i + Math.floor(windowSize / 2) + 1
+        );
+
+        const validValues = smoothedData
+          .slice(start, end)
+          .map((item) => item.predicted)
+          .filter((val) => val !== null) as number[];
+
+        if (validValues.length > 0) {
+          const average =
+            validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
+          smoothedData[i] = {
+            ...smoothedData[i],
+            predicted: Math.round(average),
+          };
+        }
+      }
+    }
+
+    return smoothedData;
+  };
+
+  const timeSeriesData = placeDetail?.timeSeries.length
+    ? smoothPredictedData(
+        placeDetail.timeSeries.map((item) => ({
+          time: new Date(item.timestamp).getTime(),
+          actual: item.actualScore || null,
+          predicted: item.predictedScore || null,
+        }))
+      )
+    : [];
 
   const getCrowdnessInfo = (value: number) => {
     if (value <= 30)
@@ -385,10 +425,10 @@ const Dashboard = () => {
                         strokeWidth={3}
                         dot={{
                           fill: "var(--color-actual)",
-                          strokeWidth: 2,
+                          strokeWidth: 0,
                           r: 4,
                         }}
-                        connectNulls={false}
+                        connectNulls={true}
                       />
                       <Line
                         type="monotone"
@@ -398,9 +438,10 @@ const Dashboard = () => {
                         strokeDasharray="5 5"
                         dot={{
                           fill: "var(--color-predicted)",
-                          strokeWidth: 2,
-                          r: 3,
+                          strokeWidth: 0,
+                          r: 4,
                         }}
+                        connectNulls={true}
                       />
                     </LineChart>
                   </ChartContainer>
