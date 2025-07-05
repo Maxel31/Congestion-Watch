@@ -266,25 +266,31 @@ class FeatureEngineer:
                 latest_data = past_data.sort_values("target_datetime").iloc[-1]
                 features["latest_score"] = latest_data["score"]
 
-        # 他の場所の混雑度（相関を考慮）
+        # 他の場所の混雑度（相関を考慮）- 固定の場所IDセットを使用
         current_time_ts = pd.Timestamp(current["target_datetime"])
         time_window_start = current_time_ts - pd.Timedelta(minutes=30)
 
-        for other_place_id in place_ids:
-            if other_place_id != current["place_id"]:
-                other_recent = all_data[
-                    (all_data["place_id"] == other_place_id)
-                    & (pd.to_datetime(all_data["target_datetime"]) >= time_window_start)
-                    & (pd.to_datetime(all_data["target_datetime"]) <= current_time_ts)
-                ]
+        # 固定の場所IDセット（1-6の範囲）を使用して一貫性を保つ
+        # 自分自身を除外せず、全場所で同じ特徴量セットを使用
+        fixed_place_ids = [1, 2, 3, 4, 5, 6]
+        for other_place_id in fixed_place_ids:
+            other_recent = all_data[
+                (all_data["place_id"] == other_place_id)
+                & (pd.to_datetime(all_data["target_datetime"]) >= time_window_start)
+                & (pd.to_datetime(all_data["target_datetime"]) <= current_time_ts)
+            ]
 
-                if len(other_recent) > 0:
-                    features[f"place_{other_place_id}_recent_mean"] = other_recent[
-                        "score"
-                    ].mean()
-                    features[f"place_{other_place_id}_recent_max"] = other_recent[
-                        "score"
-                    ].max()
+            # すべての場所IDに対して一貫した特徴量を作成（データがない場合は-1）
+            if len(other_recent) > 0:
+                features[f"place_{other_place_id}_recent_mean"] = other_recent[
+                    "score"
+                ].mean()
+                features[f"place_{other_place_id}_recent_max"] = other_recent[
+                    "score"
+                ].max()
+            else:
+                features[f"place_{other_place_id}_recent_mean"] = -1
+                features[f"place_{other_place_id}_recent_max"] = -1
 
         return features
 
