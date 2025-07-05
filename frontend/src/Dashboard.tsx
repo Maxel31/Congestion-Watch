@@ -418,8 +418,14 @@ const Dashboard = () => {
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <ReferenceLine
                         x={currentTimestamp}
-                        stroke="#ef4444"
+                        stroke="#6b7280"
                         strokeWidth={2}
+                        strokeDasharray="4 4"
+                      />
+                      <ReferenceLine
+                        y={100}
+                        stroke="#ef4444"
+                        strokeWidth={1}
                         strokeDasharray="4 4"
                       />
                       <Line
