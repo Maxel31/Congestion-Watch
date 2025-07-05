@@ -72,13 +72,13 @@ const Dashboard = () => {
     return (
       <div className="relative w-full h-full">
         <svg
-          viewBox="0 0 220 110"
+          viewBox="0 0 220 130"
           className="w-full h-full"
           preserveAspectRatio="xMidYMid meet"
         >
           {/* 背景の円弧 */}
           <path
-            d="M 10 100 A 100 100 0 0 1 210 100"
+            d="M 10 110 A 100 100 0 0 1 210 110"
             fill="none"
             stroke="#e5e7eb"
             strokeWidth="8"
@@ -86,7 +86,7 @@ const Dashboard = () => {
           />
           {/* 進捗の円弧 */}
           <path
-            d="M 10 100 A 100 100 0 0 1 210 100"
+            d="M 10 110 A 100 100 0 0 1 210 110"
             fill="none"
             stroke={color}
             strokeWidth="8"
@@ -103,9 +103,9 @@ const Dashboard = () => {
           {[0, 25, 50, 75, 100].map((tick) => {
             const angle = (tick / 100) * Math.PI;
             const x1 = 110 + 90 * Math.cos(angle);
-            const y1 = 100 - 90 * Math.sin(angle);
+            const y1 = 110 - 90 * Math.sin(angle);
             const x2 = 110 + 80 * Math.cos(angle);
-            const y2 = 100 - 80 * Math.sin(angle);
+            const y2 = 110 - 80 * Math.sin(angle);
 
             return (
               <line
