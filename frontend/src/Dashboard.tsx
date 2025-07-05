@@ -192,7 +192,7 @@ const Dashboard = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 {places.map((place) => {
                   return (
                     <button
@@ -342,10 +342,7 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="w-full">
-                  <ChartContainer
-                    config={chartConfig}
-                    className="h-96 w-full"
-                  >
+                  <ChartContainer config={chartConfig} className="h-96 w-full">
                     <LineChart data={timeSeriesData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
