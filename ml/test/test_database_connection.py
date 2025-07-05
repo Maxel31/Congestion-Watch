@@ -3,18 +3,17 @@
 """
 
 import logging
-from datetime import datetime, timedelta
 import sys
-from typing import Dict
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.database import get_db, DatabaseManager  # noqa: E402
-from src.model import CongestionPredictionModel  # noqa: E402
+from src.database import DatabaseManager, get_db  # noqa: E402
 from src.feature_engineering import FeatureEngineer  # noqa: E402
+from src.model import CongestionPredictionModel  # noqa: E402
 
 # ログ設定
 logging.basicConfig(level=logging.INFO)
@@ -203,7 +202,7 @@ def run_integration_tests() -> bool:
         ("予測データ保存", test_prediction_storage),
     ]
 
-    results: Dict[str, bool] = {}
+    results: dict[str, bool] = {}
     for test_name, test_func in tests:
         logger.info(f"\n--- {test_name}テスト ---")
         try:

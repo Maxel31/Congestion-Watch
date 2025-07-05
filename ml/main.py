@@ -4,16 +4,16 @@
 
 import logging
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uvicorn
 
 from config import config
 from src.database import get_db
 from src.model import CongestionPredictionModel
-from src.scheduler import start_scheduler, stop_scheduler, get_scheduler_status
+from src.scheduler import get_scheduler_status, start_scheduler, stop_scheduler
 
 # ロギング設定
 logging.basicConfig(
@@ -42,7 +42,7 @@ class PredictionResponse(BaseModel):
     """予測レスポンスモデル"""
 
     place_id: int
-    predictions: List[Dict[str, Any]]
+    predictions: list[dict[str, Any]]
     model_version: str
     total_predictions: int
 
@@ -58,11 +58,11 @@ class TrainingResponse(BaseModel):
 
     status: str
     trained_models: int
-    results: Dict[str, Any]
+    results: dict[str, Any]
 
 
 @app.get("/")
-async def root() -> Dict[str, str]:
+async def root() -> dict[str, str]:
     """ルートエンドポイント"""
     return {
         "service": "Congestion Watch ML Service",
@@ -72,7 +72,7 @@ async def root() -> Dict[str, str]:
 
 
 @app.get("/health")
-async def health_check() -> Dict[str, Any]:
+async def health_check() -> dict[str, Any]:
     """ヘルスチェックエンドポイント"""
     return {
         "status": "healthy",
@@ -116,7 +116,7 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
 
     except Exception as e:
         logger.error(f"予測エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"予測エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"予測エラー: {str(e)}") from e
 
 
 @app.post("/train", response_model=TrainingResponse)
@@ -140,17 +140,17 @@ async def train_model(request: TrainingRequest) -> TrainingResponse:
 
     except Exception as e:
         logger.error(f"訓練エラー: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"訓練エラー: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"訓練エラー: {str(e)}") from e
 
 
 @app.get("/scheduler/status")
-async def get_scheduler_status_endpoint() -> Dict[str, Any]:
+async def get_scheduler_status_endpoint() -> dict[str, Any]:
     """スケジューラーの状態を取得"""
     return get_scheduler_status()
 
 
 @app.post("/scheduler/start")
-async def start_scheduler_endpoint() -> Dict[str, str]:
+async def start_scheduler_endpoint() -> dict[str, str]:
     """スケジューラーを開始"""
     try:
         await start_scheduler()
@@ -159,11 +159,11 @@ async def start_scheduler_endpoint() -> Dict[str, str]:
         logger.error(f"スケジューラー開始エラー: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"スケジューラー開始エラー: {str(e)}"
-        )
+        ) from e
 
 
 @app.post("/scheduler/stop")
-async def stop_scheduler_endpoint() -> Dict[str, str]:
+async def stop_scheduler_endpoint() -> dict[str, str]:
     """スケジューラーを停止"""
     try:
         await stop_scheduler()
@@ -172,7 +172,7 @@ async def stop_scheduler_endpoint() -> Dict[str, str]:
         logger.error(f"スケジューラー停止エラー: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"スケジューラー停止エラー: {str(e)}"
-        )
+        ) from e
 
 
 @app.on_event("startup")

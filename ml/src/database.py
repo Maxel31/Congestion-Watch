@@ -2,24 +2,26 @@
 データベース接続とモデル定義
 """
 
+import logging
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Generator
+from typing import Any
+
 from sqlalchemy import (
-    create_engine,
+    JSON,
+    TIMESTAMP,
     Column,
+    ForeignKey,
     Integer,
     String,
-    TIMESTAMP,
-    ForeignKey,
-    JSON,
+    create_engine,
     func,
 )
-from config import config
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
+from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 from sqlalchemy.pool import NullPool
-from contextlib import contextmanager
-import logging
+
+from config import config
 
 logger = logging.getLogger(__name__)
 
@@ -170,17 +172,17 @@ class DatabaseManager:
     """データベース操作を管理するクラス"""
 
     @staticmethod
-    def get_all_places(db: Session) -> List[Place]:
+    def get_all_places(db: Session) -> list[Place]:
         """全ての場所情報を取得"""
         return db.query(Place).all()
 
     @staticmethod
     def get_actual_scores(
         db: Session,
-        place_id: Optional[int] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-    ) -> List[ActualScore]:
+        place_id: int | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[ActualScore]:
         """実測スコアを取得"""
         query = db.query(ActualScore)
 
@@ -195,7 +197,7 @@ class DatabaseManager:
 
     @staticmethod
     def save_prediction_model(
-        db: Session, sensor_id: int, model_params: Dict[str, Any]
+        db: Session, sensor_id: int, model_params: dict[str, Any]
     ) -> PredictionModel:
         """予測モデルを保存"""
         model = PredictionModel(sensor_id=sensor_id, model_params=model_params)
@@ -206,8 +208,8 @@ class DatabaseManager:
 
     @staticmethod
     def save_predictions(
-        db: Session, predictions: List[Dict[str, Any]]
-    ) -> List[PredictedScore]:
+        db: Session, predictions: list[dict[str, Any]]
+    ) -> list[PredictedScore]:
         """予測結果を保存"""
         predicted_scores = []
         for pred in predictions:
@@ -224,7 +226,7 @@ class DatabaseManager:
         return predicted_scores
 
     @staticmethod
-    def get_latest_model(db: Session, sensor_id: int) -> Optional[PredictionModel]:
+    def get_latest_model(db: Session, sensor_id: int) -> PredictionModel | None:
         """最新のモデルを取得"""
         return (
             db.query(PredictionModel)
@@ -245,27 +247,27 @@ class DatabaseManager:
         return deleted
 
     @staticmethod
-    def get_database_status(db: Session, prefix: str = "") -> Dict[str, Any]:
+    def get_database_status(db: Session, prefix: str = "") -> dict[str, Any]:
         """データベースの状態を取得"""
+
         from sqlalchemy import text
-        from typing import Union
-        
-        status: Dict[str, Any] = {
+
+        status: dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "prefix": prefix,
             "tables": {}
         }
-        
+
         # 各テーブルのレコード数を取得
         tables = ["place", "sensor", "prediction_model", "actual_score", "predicted_score", "weather"]
-        
+
         for table in tables:
             try:
                 result = db.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
                 status["tables"][table] = int(result) if result is not None else 0
             except Exception as e:
                 status["tables"][table] = f"ERROR: {str(e)}"
-        
+
         # 最新のデータ情報
         try:
             latest_actual = db.execute(text(
@@ -274,7 +276,7 @@ class DatabaseManager:
             status["latest_actual_data"] = latest_actual.isoformat() if latest_actual else None
         except Exception:
             status["latest_actual_data"] = None
-            
+
         try:
             latest_prediction = db.execute(text(
                 "SELECT target_datetime FROM predicted_score ORDER BY target_datetime DESC LIMIT 1"
@@ -282,11 +284,11 @@ class DatabaseManager:
             status["latest_prediction_data"] = latest_prediction.isoformat() if latest_prediction else None
         except Exception:
             status["latest_prediction_data"] = None
-            
+
         return status
 
-    @staticmethod  
-    def save_database_status(db: Session, status: Dict[str, Any], filepath: str) -> None:
+    @staticmethod
+    def save_database_status(db: Session, status: dict[str, Any], filepath: str) -> None:
         """データベース状態をファイルに保存"""
         import json
         with open(filepath, "w", encoding="utf-8") as f:

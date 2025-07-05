@@ -4,19 +4,18 @@ PostgreSQL統合テスト実行スクリプト
 Docker Composeでpostgresサービスを起動してからテストを実行
 """
 
-import subprocess
-import time
-import sys
-from pathlib import Path
 import logging
-from typing import Union
+import subprocess
+import sys
+import time
+from pathlib import Path
 
 # ログ設定
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def run_command(command: str, cwd: Union[str, None] = None) -> bool:
+def run_command(command: str, cwd: str | None = None) -> bool:
     """コマンドを実行して結果を返す"""
     try:
         result = subprocess.run(

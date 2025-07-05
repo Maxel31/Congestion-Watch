@@ -2,19 +2,21 @@
 混雑度予測モデル
 """
 
-from datetime import datetime
-from typing import Dict, Any, List, Optional
-import pickle
 import json
-from pathlib import Path
-from config import config
-import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sqlalchemy.orm import Session
 import logging
+import pickle
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sqlalchemy.orm import Session
+
+from config import config
 
 from .database import DatabaseManager, Sensor
 from .feature_engineering import FeatureEngineer
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 class CongestionPredictionModel:
     """混雑度予測モデル"""
 
-    def __init__(self, model_dir: Optional[str] = None):
+    def __init__(self, model_dir: str | None = None):
         if model_dir is None:
             model_dir = config.MODEL_DIR
         self.model_dir = Path(model_dir)
@@ -35,10 +37,10 @@ class CongestionPredictionModel:
         self.predictions_dir = self.model_dir / "predictions"
         self.predictions_dir.mkdir(exist_ok=True)
 
-        self.models: Dict[
+        self.models: dict[
             int, RandomForestRegressor
         ] = {}  # place_id -> model のマッピング
-        self.feature_columns: Optional[List[str]] = None
+        self.feature_columns: list[str] | None = None
         self.model_params = {
             "n_estimators": 100,
             "max_depth": 20,
@@ -48,7 +50,7 @@ class CongestionPredictionModel:
             "n_jobs": -1,
         }
 
-    def train(self, db: Session, test_size: float = 0.2) -> Dict[str, Any]:
+    def train(self, db: Session, test_size: float = 0.2) -> dict[str, Any]:
         """
         全場所のモデルを訓練
 
@@ -157,7 +159,7 @@ class CongestionPredictionModel:
         place_id: int,
         target_datetime: datetime,
         hours_ahead: int = 24,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         指定場所の混雑度を予測
 
@@ -238,7 +240,7 @@ class CongestionPredictionModel:
 
         # 予測結果をファイルに保存
         self._save_predictions_to_file(place_id, target_datetime, results)
-        
+
         # データベース状態を記録（予測実行後）
         self._save_database_status_after_prediction(db, place_id, target_datetime, len(results))
 
@@ -248,7 +250,7 @@ class CongestionPredictionModel:
         self,
         place_id: int,
         target_datetime: datetime,
-        predictions: List[Dict[str, Any]],
+        predictions: list[dict[str, Any]],
     ) -> None:
         """予測結果をJSONファイルに保存"""
         timestamp = target_datetime.strftime("%Y%m%d_%H%M%S")
@@ -272,7 +274,7 @@ class CongestionPredictionModel:
 
         logger.info(f"予測結果を保存しました: {filepath}")
 
-    def _save_training_results_to_file(self, train_result: Dict[str, Any]) -> None:
+    def _save_training_results_to_file(self, train_result: dict[str, Any]) -> None:
         """学習結果をJSONファイルに保存"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"training_results_{timestamp}.json"
@@ -299,26 +301,26 @@ class CongestionPredictionModel:
     ) -> None:
         """予測実行後のデータベース状態を記録"""
         from .database import DatabaseManager
-        
+
         db_manager = DatabaseManager()
-        
+
         # 予測前の状態
         status_before = db_manager.get_database_status(db, f"BEFORE_PREDICTION_place_{place_id}")
-        
+
         # 予測実行（実際の保存は別で行われる）
-        
+
         # 予測後の状態
         status_after = db_manager.get_database_status(db, f"AFTER_PREDICTION_place_{place_id}")
-        
+
         # ファイルに保存
         timestamp = target_datetime.strftime("%Y%m%d_%H%M%S")
-        
+
         before_filepath = self.model_dir / f"db_status_before_prediction_place_{place_id}_{timestamp}.json"
         after_filepath = self.model_dir / f"db_status_after_prediction_place_{place_id}_{timestamp}.json"
-        
+
         db_manager.save_database_status(db, status_before, str(before_filepath))
         db_manager.save_database_status(db, status_after, str(after_filepath))
-        
+
         logger.info(f"データベース状態を記録しました: {before_filepath}, {after_filepath}")
 
     def _calculate_confidence(
@@ -387,7 +389,7 @@ class CongestionPredictionModel:
             self.models = pickle.load(f)
 
         # メタデータをロード
-        with open(metadata_path, "r") as f:
+        with open(metadata_path) as f:
             metadata = json.load(f)
             self.feature_columns = metadata.get("feature_columns")
             self.model_params = metadata.get("model_params", self.model_params)
@@ -398,7 +400,7 @@ class CongestionPredictionModel:
         self,
         db: Session,
         db_manager: DatabaseManager,
-        results: Dict[int, Dict[str, Any]],
+        results: dict[int, dict[str, Any]],
     ) -> None:
         """モデル情報をデータベースに保存"""
         for place_id, result in results.items():

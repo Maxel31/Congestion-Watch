@@ -2,12 +2,13 @@
 特徴量エンジニアリング
 """
 
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
-import pandas as pd
-import numpy as np
-from sqlalchemy.orm import Session
 import logging
+from datetime import datetime, timedelta
+from typing import Any
+
+import numpy as np
+import pandas as pd
+from sqlalchemy.orm import Session
 
 from .database import DatabaseManager
 
@@ -22,8 +23,8 @@ class FeatureEngineer:
         self.db_manager = DatabaseManager()
 
     def prepare_training_data(
-        self, place_id: Optional[int] = None, start_date: Optional[datetime] = None
-    ) -> Tuple[pd.DataFrame, pd.Series]:
+        self, place_id: int | None = None, start_date: datetime | None = None
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """
         訓練データの準備
 
@@ -140,14 +141,14 @@ class FeatureEngineer:
 
         # 予測時点を生成（5分間隔、正確な時刻に調整）
         prediction_times = []
-        
+
         # 開始時刻を5分単位に切り上げ
         start_minute = (target_datetime.minute // 5 + 1) * 5
         if start_minute >= 60:
             current_time = target_datetime.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
         else:
             current_time = target_datetime.replace(minute=start_minute, second=0, microsecond=0)
-        
+
         end_time = target_datetime + timedelta(hours=prediction_hours)
 
         while current_time <= end_time:
@@ -196,8 +197,8 @@ class FeatureEngineer:
         current: pd.Series,
         past_data: pd.DataFrame,
         all_data: pd.DataFrame,
-        place_ids: List[int],
-    ) -> Dict[str, Any]:
+        place_ids: list[int],
+    ) -> dict[str, Any]:
         """
         単一レコードの特徴量を作成
 
@@ -221,7 +222,7 @@ class FeatureEngineer:
         # 過去の混雑度統計（時間的特徴は使用せず、短期的なトレンドに特化）
         if len(past_data) > 0:
             current_time = current["target_datetime"]
-            
+
             # 直近15分の統計
             cutoff_15m = pd.Timestamp(current_time) - pd.Timedelta(minutes=15)
             recent_15m = past_data[
@@ -249,7 +250,7 @@ class FeatureEngineer:
                 features["past_1h_std"] = recent_1h["score"].std()
                 features["past_1h_count"] = len(recent_1h)
 
-            # 直近3時間の統計  
+            # 直近3時間の統計
             cutoff_3h = pd.Timestamp(current_time) - pd.Timedelta(hours=3)
             recent_3h = past_data[
                 pd.to_datetime(past_data["target_datetime"]) >= cutoff_3h
@@ -259,7 +260,7 @@ class FeatureEngineer:
                 features["past_3h_max"] = recent_3h["score"].max()
                 features["past_3h_min"] = recent_3h["score"].min()
                 features["past_3h_std"] = recent_3h["score"].std()
-                
+
             # 最新値（直近のデータポイント）
             if len(past_data) > 0:
                 latest_data = past_data.sort_values("target_datetime").iloc[-1]

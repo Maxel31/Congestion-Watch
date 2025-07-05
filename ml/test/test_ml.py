@@ -2,17 +2,17 @@
 ML機能の基本テスト
 """
 
-import pytest
 import os
-from datetime import datetime
-from unittest.mock import patch, MagicMock
-import pandas as pd
-import numpy as np
-from fastapi.testclient import TestClient
-from typing import Any
-
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
+from fastapi.testclient import TestClient
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
@@ -24,9 +24,9 @@ from config import config  # noqa: E402
 os.environ["DATABASE_URL"] = config.TEST_DATABASE_URL  # noqa: E402
 
 from main import app  # noqa: E402
-from src.model import CongestionPredictionModel  # noqa: E402
-from src.feature_engineering import FeatureEngineer  # noqa: E402
 from src.database import DatabaseManager  # noqa: E402
+from src.feature_engineering import FeatureEngineer  # noqa: E402
+from src.model import CongestionPredictionModel  # noqa: E402
 
 
 class TestMLService:

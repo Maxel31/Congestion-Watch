@@ -2,15 +2,16 @@
 カバレッジ向上のための追加テスト
 """
 
-import pytest
 import os
-from datetime import datetime, timedelta
-from unittest.mock import patch, MagicMock
-from typing import Any
-import pandas as pd
-import numpy as np
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
@@ -21,15 +22,15 @@ from config import config  # noqa: E402
 
 os.environ["DATABASE_URL"] = config.TEST_DATABASE_URL  # noqa: E402
 
+from src.database import DatabaseManager  # noqa: E402
 from src.feature_engineering import FeatureEngineer  # noqa: E402
 from src.model import CongestionPredictionModel  # noqa: E402
 from src.scheduler import (  # noqa: E402
     ModelScheduler,
+    get_scheduler_status,
     start_scheduler,
     stop_scheduler,
-    get_scheduler_status,
 )
-from src.database import DatabaseManager  # noqa: E402
 
 
 class TestFeatureEngineeringCoverage:

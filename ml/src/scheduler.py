@@ -4,13 +4,15 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Any
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
+
 from config import config
 
-from .database import get_db, DatabaseManager
+from .database import DatabaseManager, get_db
 from .model import CongestionPredictionModel
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,7 @@ class ModelScheduler:
         if test_mode:
             # テストモード：短い間隔で実行
             logger.info("テストモードでスケジューラーを開始")
-            
+
             # 2分ごとにモデルを再訓練（テスト用）
             self.scheduler.add_job(
                 self._daily_retrain,
@@ -55,7 +57,7 @@ class ModelScheduler:
         else:
             # 本番モード：要件通りの間隔
             logger.info("本番モードでスケジューラーを開始")
-            
+
             # 毎日指定時刻にモデルを再訓練
             self.scheduler.add_job(
                 self._daily_retrain,
@@ -214,7 +216,7 @@ class ModelScheduler:
         except Exception as e:
             logger.error(f"予測データクリーンアップでエラー: {str(e)}")
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """スケジューラーの状態を取得"""
         jobs = []
         if self.is_running:
@@ -246,6 +248,6 @@ async def stop_scheduler() -> None:
     await scheduler.stop()
 
 
-def get_scheduler_status() -> Dict[str, Any]:
+def get_scheduler_status() -> dict[str, Any]:
     """スケジューラーの状態を取得する関数"""
     return scheduler.get_status()
