@@ -341,10 +341,10 @@ const Dashboard = () => {
                     <span className="text-sm text-gray-600">予測値</span>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="w-full">
                   <ChartContainer
                     config={chartConfig}
-                    className="h-96 min-w-[800px]"
+                    className="h-96 w-full"
                   >
                     <LineChart data={timeSeriesData}>
                       <CartesianGrid strokeDasharray="3 3" />
