@@ -41,19 +41,15 @@ services:
     image: postgres:13
     container_name: postgresql
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${POSTGRES_USER:?err}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
       POSTGRES_DB: ${POSTGRES_DB:?err}
-      # PGDATA: /var/lib/postgresql/data
       TZ: "Asia/Tokyo"
     ports:
       - "5432:5432"
     volumes:
-      - ./database/docker/init-user.sh:/docker-entrypoint-initdb.d/01-init-user.sh
-      - ./database/migrations/000001_init_schema.up.sql:/docker-entrypoint-initdb.d/02-init.sql
-      - ./database/seeds/initial_data.sql:/docker-entrypoint-initdb.d/03-initial_data.sql
-    # volumes:
-    #   - ./db-data:/var/lib/postgresql/data
+      - ./database/schema:/docker-entrypoint-initdb.d
+      - ./db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 3s
