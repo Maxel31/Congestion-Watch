@@ -44,14 +44,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?err}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
       POSTGRES_DB: ${POSTGRES_DB:?err}
-      # PGDATA: /var/lib/postgresql/data
       TZ: "Asia/Tokyo"
     ports:
       - "5432:5432"
     volumes:
-      - ./database/docker/01-init-database.sql:/docker-entrypoint-initdb.d/01-init-database.sql
-    # volumes:
-    #   - ./db-data:/var/lib/postgresql/data
+      - ./database/schema:/docker-entrypoint-initdb.d
+      - ./db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 3s
