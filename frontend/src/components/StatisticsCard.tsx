@@ -11,26 +11,98 @@ interface StatisticsCardProps {
 
 const StatisticsCard = ({
   timeSeries,
+  place,
   loading,
   error,
 }: StatisticsCardProps) => {
-  const getCurrentCongestion = () => {
-    if (!timeSeries) return 0;
-    const latestActual = timeSeries
-      .filter((t) => t.actualScore !== undefined)
-      .slice(-1)[0];
-    return latestActual?.actualScore || 0;
+  const isOpen = (timestamp: Date) => {
+    if (!place?.opens) return false;
+
+    const dayOfWeek = timestamp.getDay();
+    const currentTime = timestamp.getHours() * 100 + timestamp.getMinutes();
+
+    const todayHours = place.opens[dayOfWeek];
+    if (!todayHours) return false;
+
+    return todayHours.some(([start, end]) => {
+      return currentTime >= start && currentTime <= end;
+    });
   };
 
-  const getMaxCongestion = () => {
-    if (!timeSeries) return 0;
-    return Math.max(...timeSeries.map((t) => t.actualScore || 0));
+  const getFutureOpenPeak = () => {
+    if (!timeSeries) return { score: 0, time: null };
+
+    const now = new Date();
+    const futureOpenTimeSeries = timeSeries
+      .filter((t) => t.timestamp >= now && isOpen(t.timestamp))
+      .filter((t) => t.predictedScore !== undefined);
+
+    if (futureOpenTimeSeries.length === 0) return { score: 0, time: null };
+
+    const peak = futureOpenTimeSeries.reduce((max, current) => {
+      return (current.predictedScore || 0) > (max.predictedScore || 0)
+        ? current
+        : max;
+    });
+
+    return {
+      score: peak.predictedScore || 0,
+      time: peak.timestamp,
+    };
+  };
+
+  const getTodaysPeak = () => {
+    if (!timeSeries) return { score: 0, time: null };
+
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const todayData = timeSeries
+      .filter((t) => t.timestamp >= startOfDay && t.timestamp <= endOfDay)
+      .filter((t) => t.actualScore !== undefined);
+
+    if (todayData.length === 0) return { score: 0, time: null };
+
+    const peak = todayData.reduce((max, current) => {
+      return (current.actualScore || 0) > (max.actualScore || 0)
+        ? current
+        : max;
+    });
+
+    return {
+      score: peak.actualScore || 0,
+      time: peak.timestamp,
+    };
   };
 
   const getAverageCongestion = () => {
     if (!timeSeries) return 0;
-    const total = timeSeries.reduce((sum, t) => sum + (t.actualScore || 0), 0);
-    return (total / timeSeries.length).toFixed(1);
+    const actualScores = timeSeries
+      .map((t) => t.actualScore)
+      .filter((score) => score !== undefined) as number[];
+
+    if (actualScores.length === 0) return 0;
+
+    const total = actualScores.reduce((sum, score) => sum + score, 0);
+    return (total / actualScores.length).toFixed(1);
+  };
+
+  const formatTime = (timestamp: Date | null) => {
+    if (!timestamp) return "";
+    return timestamp.toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getCrowdnessColor = (value: number) => {
+    if (value <= 30) return "#22c55e";
+    if (value <= 60) return "#f59e0b";
+    if (value <= 80) return "#f97316";
+    return "#ef4444";
   };
   return (
     <Card>
@@ -50,22 +122,51 @@ const StatisticsCard = ({
             <div className="text-red-500">エラー: {error.message}</div>
           </div>
         ) : (
-          <div className="space-y-4 h-32">
+          <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">現在の混雑度</span>
-              <span className="text-2xl font-bold text-gray-900">
-                {getCurrentCongestion()}%
-              </span>
+              <span className="text-sm text-gray-600">今後の最高混雑度</span>
+              <div>
+                {getFutureOpenPeak().score > 0 ? (
+                  <>
+                    <span
+                      className="text-xl font-bold"
+                      style={{
+                        color: getCrowdnessColor(getFutureOpenPeak().score),
+                      }}
+                    >
+                      {getFutureOpenPeak().score}%
+                    </span>
+                    <div className="text-xs text-gray-400">
+                      {formatTime(getFutureOpenPeak().time)}
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-sm text-gray-500">本日営業終了</span>
+                )}
+              </div>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">今日の最高混雑度</span>
-              <span className="text-lg font-semibold text-red-600">
-                {getMaxCongestion()}%
-              </span>
+              <div>
+                <span
+                  className="text-xl font-bold"
+                  style={{ color: getCrowdnessColor(getTodaysPeak().score) }}
+                >
+                  {getTodaysPeak().score}%
+                </span>
+                <div className="text-xs text-gray-400">
+                  {formatTime(getTodaysPeak().time)}
+                </div>
+              </div>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">平均混雑度</span>
-              <span className="text-lg font-semibold text-blue-600">
+              <span className="text-sm text-gray-600">今日の平均混雑度</span>
+              <span
+                className="text-xl font-bold"
+                style={{
+                  color: getCrowdnessColor(Number(getAverageCongestion())),
+                }}
+              >
                 {getAverageCongestion()}%
               </span>
             </div>
