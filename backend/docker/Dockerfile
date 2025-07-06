@@ -9,13 +9,13 @@ RUN apk add --no-cache git bash
 RUN go install github.com/air-verse/air@latest
 
 # 依存関係管理のためのファイルをコピー
-COPY backend/go.mod backend/go.sum ./
+COPY go.mod go.sum ./
 
 # 依存関係のダウンロード
 RUN go mod download
 
 # アプリケーションのコードをコピー
-COPY backend/ ./
+COPY . .
 
 # airでホットリロードを有効にして実行
 CMD ["air", "-c", ".air.toml"]

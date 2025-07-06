@@ -1,0 +1,32 @@
+# Goの公式イメージをベースにする
+FROM golang:1.24.2-alpine as builder
+
+# アプリケーションディレクトリを作成する
+WORKDIR /app
+
+# Goのモジュールを有効にする
+ENV GO111MODULE=on
+
+# 依存関係をコピーし、ダウンロードする
+COPY go.mod go.sum ./
+RUN go mod download
+
+# アプリケーションのソースをコピーする
+COPY . .
+
+# アプリケーションをビルドする
+RUN go build -o main .
+
+# 実行用のステージ
+FROM alpine:3.19
+
+WORKDIR /root/
+
+# ビルドしたバイナリをコピー
+COPY --from=builder /app/main .
+
+# ポート待ち受け
+EXPOSE 8080
+
+# アプリケーションの起動コマンド実行
+CMD ["./main"]
