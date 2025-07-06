@@ -1,6 +1,6 @@
 import { TimeSeries } from '@/types/api';
 
-const generateTimeSeriesData = (): TimeSeries[] => {
+const generateTimeSeriesData = (placeId: number): TimeSeries[] => {
   const now = new Date();
   const data: TimeSeries[] = [];
 
@@ -29,7 +29,8 @@ const generateTimeSeriesData = (): TimeSeries[] => {
     const isFuture = timestamp > now;
 
     data.push({
-      timestamp: timestamp,
+      placeId: placeId,
+      targetDatetime: timestamp,
       actualScore: isFuture ? undefined : actualScore,
       predictedScore,
     });
@@ -38,6 +39,6 @@ const generateTimeSeriesData = (): TimeSeries[] => {
 };
 
 export const mockPlaceDetails: Record<number, TimeSeries[]> = {
-  1: generateTimeSeriesData(),
-  2: generateTimeSeriesData(),
+  1: generateTimeSeriesData(1),
+  2: generateTimeSeriesData(2),
 };

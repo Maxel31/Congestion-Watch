@@ -19,9 +19,26 @@ class ApiService {
     return response.json();
   }
 
+
+
   async getPlace(placeId: number): Promise<TimeSeries[]> {
-    return this.request<TimeSeries[]>(`/places/${placeId}`);
+    const today = new Date().toISOString().split('T')[0];
+    const response = await this.request<CloudDataResponse[]>(`/cloud-data/${placeId}/${today}`);
+
+    return response.map(item => ({
+      predictedScore: item.predicted_score,
+      actualScore: item.actual_score,
+      targetDatetime: new Date(item.target_datetime),
+      placeId: item.place_id
+    }));
   }
+}
+
+interface CloudDataResponse {
+  predicted_score: number;
+  actual_score?: number;
+  target_datetime: string;
+  place_id: number;
 }
 
 export const apiService = new ApiService();

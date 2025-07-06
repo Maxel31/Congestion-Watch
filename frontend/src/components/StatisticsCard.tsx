@@ -33,7 +33,7 @@ const StatisticsCard = ({
 
     const now = new Date();
     const futureOpenTimeSeries = timeSeries
-      .filter((t) => t.timestamp >= now && isOpen(t.timestamp))
+      .filter((t) => t.targetDatetime >= now && isOpen(t.targetDatetime))
       .filter((t) => t.predictedScore !== undefined && t.predictedScore > 0);
 
     if (futureOpenTimeSeries.length === 0) return { score: 0, time: null };
@@ -46,7 +46,7 @@ const StatisticsCard = ({
 
     return {
       score: peak.predictedScore || 0,
-      time: peak.timestamp,
+      time: peak.targetDatetime,
     };
   };
 
@@ -60,7 +60,9 @@ const StatisticsCard = ({
     endOfDay.setHours(23, 59, 59, 999);
 
     const todayData = timeSeries
-      .filter((t) => t.timestamp >= startOfDay && t.timestamp <= endOfDay)
+      .filter(
+        (t) => t.targetDatetime >= startOfDay && t.targetDatetime <= endOfDay
+      )
       .filter((t) => t.actualScore !== undefined);
 
     if (todayData.length === 0) return { score: 0, time: null };
@@ -73,7 +75,7 @@ const StatisticsCard = ({
 
     return {
       score: peak.actualScore || 0,
-      time: peak.timestamp,
+      time: peak.targetDatetime,
     };
   };
 

@@ -82,7 +82,7 @@ const ChartCard = ({
   const timeSeriesData = timeSeries?.length
     ? smoothPredictedData(
         timeSeries.map((t) => ({
-          time: t.timestamp.getTime(),
+          time: t.targetDatetime.getTime(),
           actual: t.actualScore || null,
           predicted: t.predictedScore || null,
         }))
