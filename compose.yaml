@@ -36,8 +36,6 @@ services:
     build:
       context: ml
       dockerfile: docker/Dockerfile
-    ports:
-      - "8001:8001"
     volumes:
       - ./ml:/app
     command: ["uv", "run", "python", "main.py", "--server"]

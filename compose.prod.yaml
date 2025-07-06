@@ -29,14 +29,14 @@ services:
 
   ml:
     build:
-      context: .
-      dockerfile: ml/docker/Dockerfile
-    ports:
-      - "5050:5050"
+      context: ml
+      dockerfile: docker/Dockerfile
     volumes:
       - ./ml:/app
-    environment:
-      - PYTHON_ENV=development
+    command: ["uv", "run", "python", "main.py", "--server"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:13
