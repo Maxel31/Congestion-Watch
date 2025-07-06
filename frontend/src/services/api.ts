@@ -1,4 +1,4 @@
-import { PlaceDetailResponse, PlaceListResponse } from '@/types/api';
+import { TimeSeries } from '@/types/api';
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -19,12 +19,8 @@ class ApiService {
     return response.json();
   }
 
-  async getPlaces(): Promise<PlaceListResponse> {
-    return this.request<PlaceListResponse>('/places');
-  }
-
-  async getPlaceDetail(placeId: number): Promise<PlaceDetailResponse> {
-    return this.request<PlaceDetailResponse>(`/places/${placeId}`);
+  async getPlace(placeId: number): Promise<TimeSeries[]> {
+    return this.request<TimeSeries[]>(`/places/${placeId}`);
   }
 }
 

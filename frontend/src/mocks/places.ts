@@ -1,15 +1,4 @@
-import { Place, PlaceDetail, TimeSeries } from '@/types/api';
-
-export const mockPlaces: Place[] = [
-  {
-    id: 1,
-    name: '北館食堂',
-  },
-  {
-    id: 2,
-    name: '南館食堂',
-  },
-];
+import { TimeSeries } from '@/types/api';
 
 const generateTimeSeriesData = (): TimeSeries[] => {
   const now = new Date();
@@ -48,13 +37,7 @@ const generateTimeSeriesData = (): TimeSeries[] => {
   return data;
 };
 
-export const mockPlaceDetails: Record<number, PlaceDetail> = {
-  1: {
-    place: mockPlaces[0],
-    timeSeries: generateTimeSeriesData(),
-  },
-  2: {
-    place: mockPlaces[1],
-    timeSeries: generateTimeSeriesData(),
-  },
+export const mockPlaceDetails: Record<number, TimeSeries[]> = {
+  1: generateTimeSeriesData(),
+  2: generateTimeSeriesData(),
 };

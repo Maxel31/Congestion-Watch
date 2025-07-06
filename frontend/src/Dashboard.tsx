@@ -1,465 +1,78 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { usePlaceDetail, usePlaces } from "@/hooks/usePlaces";
+import ChartCard from "@/components/ChartCard";
+import CurrentStatusCard from "@/components/CurrentStatusCard";
+import Header from "@/components/Header";
+import PlaceSelector from "@/components/PlaceSelector";
+import StatisticsCard from "@/components/StatisticsCard";
+import { useTimeSeries } from "@/hooks/usePlaces";
 import { usePolling } from "@/hooks/usePolling";
-import { Clock, MapPin, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceLine,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { places } from "./constants/places";
 
 const Dashboard = () => {
   const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null);
-  const {
-    places,
-    loading: placesLoading,
-    error: placesError,
-    refetch: refreshPlaces,
-  } = usePlaces();
-  const {
-    placeDetail,
-    loading: placeDetailLoading,
-    error: placeDetailError,
-    refetch: refreshPlaceDetail,
-  } = usePlaceDetail(selectedPlaceId || 0);
+  const { timeSeries, loading, error, refetch } = useTimeSeries(
+    selectedPlaceId || 0
+  );
 
   usePolling(
     () => {
-      refreshPlaces();
       if (selectedPlaceId) {
-        refreshPlaceDetail();
+        refetch();
       }
     },
     { interval: 60000 }
   );
 
-  const selectedPlace = places.find((f) => f.id === selectedPlaceId);
-
-  const smoothPredictedData = (
-    data: Array<{
-      time: number;
-      actual: number | null;
-      predicted: number | null;
-    }>
-  ) => {
-    const smoothedData = [...data];
-    const windowSize = 1;
-
-    for (let i = 0; i < smoothedData.length; i++) {
-      if (smoothedData[i].predicted !== null) {
-        const start = Math.max(0, i - Math.floor(windowSize / 2));
-        const end = Math.min(
-          smoothedData.length,
-          i + Math.floor(windowSize / 2) + 1
-        );
-
-        const validValues = smoothedData
-          .slice(start, end)
-          .map((item) => item.predicted)
-          .filter((val) => val !== null) as number[];
-
-        if (validValues.length > 0) {
-          const average =
-            validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
-          smoothedData[i] = {
-            ...smoothedData[i],
-            predicted: Math.round(average),
-          };
-        }
-      }
-    }
-
-    return smoothedData;
-  };
-
-  const timeSeriesData = placeDetail?.timeSeries.length
-    ? smoothPredictedData(
-        placeDetail.timeSeries.map((item) => ({
-          time: item.timestamp.getTime(),
-          actual: item.actualScore || null,
-          predicted: item.predictedScore || null,
-        }))
-      )
-    : [];
-
-  const getCrowdnessInfo = (value: number) => {
-    if (value <= 30)
-      return { color: "#22c55e", label: "空いている", bgColor: "bg-green-100" };
-    if (value <= 60)
-      return { color: "#f59e0b", label: "普通", bgColor: "bg-yellow-100" };
-    if (value <= 80)
-      return { color: "#f97316", label: "混雑", bgColor: "bg-orange-100" };
-    return { color: "#ef4444", label: "非常に混雑", bgColor: "bg-red-100" };
-  };
-
-  const SpeedMeter = ({ value }: { value?: number }) => {
-    const { color, label } =
-      value !== undefined
-        ? getCrowdnessInfo(value)
-        : { color: "#9ca3af", label: "不明" };
-
-    return (
-      <div className="relative w-full h-full">
-        <svg
-          viewBox="0 0 220 130"
-          className="w-full h-full"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          <path
-            d="M 10 110 A 100 100 0 0 1 210 110"
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 10 110 A 100 100 0 0 1 210 110"
-            fill="none"
-            stroke={color}
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={Math.PI * 105}
-            strokeDashoffset={
-              value !== undefined
-                ? Math.PI * 105 - (value / 100) * Math.PI * 105
-                : Math.PI * 105
-            }
-            className="transition-all duration-1000 ease-out"
-          />
-          {[0, 25, 50, 75, 100].map((tick) => {
-            const angle = (tick / 100) * Math.PI;
-            const x1 = 110 + 90 * Math.cos(angle);
-            const y1 = 110 - 90 * Math.sin(angle);
-            const x2 = 110 + 80 * Math.cos(angle);
-            const y2 = 110 - 80 * Math.sin(angle);
-            return (
-              <line
-                key={tick}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke="#9ca3af"
-                strokeWidth="2"
-              />
-            );
-          })}
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center mt-8">
-          <div className="text-sm text-gray-600">{label}</div>
-          <div className="text-4xl font-bold text-gray-800">
-            {value !== undefined ? `${value}%` : "不明"}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const chartConfig = {
-    actual: {
-      label: "実測値",
-      color: "#3b82f6",
-    },
-    predicted: {
-      label: "予測値",
-      color: "#f59e0b",
-    },
-  };
-
-  const [currentTime, setCurrentTime] = useState<string>(
-    new Date().toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  );
-
+  const selectedPlace = places.find((p) => p.id === selectedPlaceId) || null;
   const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
 
   useEffect(() => {
     if (places.length > 0 && selectedPlaceId === null) {
       setSelectedPlaceId(places[0].id);
     }
-  }, [places, selectedPlaceId]);
+  }, [selectedPlaceId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString("ja-JP", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
-      setCurrentTimestamp(now.getTime());
+      setCurrentTimestamp(new Date().getTime());
     }, 10000);
-
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Congestion Watch
-            </h1>
-          </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <Clock className="w-4 h-4" />
-            <span>{currentTime}</span>
-          </div>
-        </div>
+        <Header currentTimestamp={currentTimestamp} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <MapPin className="w-5 h-5 mr-2" />
-              施設選択
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {placesLoading ? (
-              <div className="flex justify-center items-center h-32">
-                <div className="text-gray-500">読み込み中...</div>
-              </div>
-            ) : placesError ? (
-              <div className="flex justify-center items-center h-32">
-                <div className="text-red-500">
-                  エラー: {placesError.message}
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {places.map((place) => {
-                  return (
-                    <button
-                      key={place.id}
-                      onClick={() => setSelectedPlaceId(place.id)}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        selectedPlaceId === place.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900">
-                          {place.name}
-                        </h3>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <PlaceSelector
+          places={places}
+          selectedPlaceId={selectedPlaceId}
+          onSelectPlace={setSelectedPlaceId}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Users className="w-5 h-5 mr-2" />
-                現在の混雑度 - {selectedPlace?.name || "選択してください"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              {placeDetailLoading ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="text-gray-500">読み込み中...</div>
-                </div>
-              ) : placeDetailError ? (
-                <div className="flex justify-center items-center h-64">
-                  <div className="text-red-500">
-                    エラー: {placeDetailError.message}
-                  </div>
-                </div>
-              ) : (
-                <div className="h-32 w-full">
-                  <SpeedMeter
-                    value={
-                      placeDetail?.timeSeries
-                        .filter((d) => d.actualScore !== undefined)
-                        .slice(-1)[0].actualScore
-                    }
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CurrentStatusCard
+            timeSeries={timeSeries}
+            place={selectedPlace}
+            loading={loading}
+            error={error}
+          />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2" />
-                統計情報
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">現在の混雑度</span>
-                  <span className="text-2xl font-bold text-gray-900">
-                    {
-                      placeDetail?.timeSeries
-                        .filter((d) => d.actualScore !== undefined)
-                        .slice(-1)[0].actualScore
-                    }
-                    %
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">
-                    今日の最高混雑度
-                  </span>
-                  <span className="text-lg font-semibold text-red-600">
-                    {placeDetail
-                      ? Math.max(
-                          ...placeDetail.timeSeries.map(
-                            (d) => d.actualScore || 0
-                          )
-                        )
-                      : 0}
-                    %
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">平均混雑度</span>
-                  <span className="text-lg font-semibold text-blue-600">
-                    {placeDetail
-                      ? (
-                          placeDetail.timeSeries.reduce(
-                            (sum, d) => sum + (d.actualScore || 0),
-                            0
-                          ) / placeDetail.timeSeries.length
-                        ).toFixed(1)
-                      : 0}
-                    %
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatisticsCard
+            timeSeries={timeSeries}
+            place={selectedPlace}
+            loading={loading}
+            error={error}
+          />
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>混雑度の推移</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {placeDetailLoading ? (
-              <div className="flex justify-center items-center h-96">
-                <div className="text-gray-500">読み込み中...</div>
-              </div>
-            ) : placeDetailError ? (
-              <div className="flex justify-center items-center h-96">
-                <div className="text-red-500">
-                  エラー: {placeDetailError.message}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="mb-4 flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600">実測値</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 bg-yellow-500 rounded-full border-2 border-yellow-500"
-                      style={{
-                        backgroundImage:
-                          "repeating-linear-gradient(45deg, transparent, transparent 2px, white 2px, white 4px)",
-                      }}
-                    ></div>
-                    <span className="text-sm text-gray-600">予測値</span>
-                  </div>
-                </div>
-                <div className="w-full">
-                  <ChartContainer config={chartConfig} className="h-96 w-full">
-                    <LineChart data={timeSeriesData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="time"
-                        tickLine={false}
-                        axisLine={false}
-                        className="text-xs"
-                        type="number"
-                        scale="time"
-                        domain={["dataMin", "dataMax"]}
-                        // interval={0}
-                        ticks={Array.from({ length: 24 }, (_, i) => {
-                          const startOfDay = new Date();
-                          startOfDay.setHours(0, 0, 0, 0);
-                          return startOfDay.getTime() + i * 60 * 60 * 1000;
-                        })}
-                        tickFormatter={(value) => {
-                          const date = new Date(value);
-                          return date.getHours() + ":00";
-                        }}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        className="text-xs"
-                        domain={[0, 120]}
-                        tick={false}
-                        width={10}
-                      />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <ReferenceLine
-                        x={currentTimestamp}
-                        stroke="#6b7280"
-                        strokeWidth={2}
-                        strokeDasharray="4 4"
-                      />
-                      <ReferenceLine
-                        y={100}
-                        stroke="#ef4444"
-                        strokeWidth={1}
-                        strokeDasharray="4 4"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="actual"
-                        stroke="var(--color-actual)"
-                        strokeWidth={3}
-                        dot={{
-                          fill: "var(--color-actual)",
-                          strokeWidth: 0,
-                          r: 4,
-                        }}
-                        connectNulls={true}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="predicted"
-                        stroke="var(--color-predicted)"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{
-                          fill: "var(--color-predicted)",
-                          strokeWidth: 0,
-                          r: 4,
-                        }}
-                        connectNulls={true}
-                      />
-                    </LineChart>
-                  </ChartContainer>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <ChartCard
+          timeSeries={timeSeries}
+          place={selectedPlace}
+          loading={loading}
+          error={error}
+          currentTimestamp={currentTimestamp}
+        />
       </div>
     </div>
   );
