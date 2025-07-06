@@ -1,24 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TimeSeries } from "@/types/api";
 import { Users } from "lucide-react";
-import { PlaceDetail } from "@/types/api";
 import SpeedMeter from "./SpeedMeter";
 
 interface CurrentCongestionCardProps {
-  placeDetail: PlaceDetail | null;
+  timeSeries: TimeSeries[] | null;
   selectedPlaceName: string;
   loading: boolean;
   error: Error | null;
 }
 
 const CurrentCongestionCard = ({
-  placeDetail,
+  timeSeries: timeSeries,
   selectedPlaceName,
   loading,
   error,
 }: CurrentCongestionCardProps) => {
   const getCurrentCongestion = () => {
-    if (!placeDetail) return undefined;
-    const latestActual = placeDetail.timeSeries
+    if (!timeSeries) return undefined;
+    const latestActual = timeSeries
       .filter((d) => d.actualScore !== undefined)
       .slice(-1)[0];
     return latestActual?.actualScore;
@@ -42,9 +42,7 @@ const CurrentCongestionCard = ({
             <div className="text-red-500">エラー: {error.message}</div>
           </div>
         ) : (
-          <div className="w-full">
-            <SpeedMeter value={getCurrentCongestion()} />
-          </div>
+          <SpeedMeter value={getCurrentCongestion()} />
         )}
       </CardContent>
     </Card>

@@ -4,7 +4,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { PlaceDetail } from "@/types/api";
+import { TimeSeries } from "@/types/api";
 import { ChartLine } from "lucide-react";
 import {
   CartesianGrid,
@@ -16,7 +16,7 @@ import {
 } from "recharts";
 
 interface CongestionChartProps {
-  placeDetail: PlaceDetail | null;
+  timeSeries: TimeSeries[] | null;
   loading: boolean;
   error: Error | null;
   currentTimestamp: number;
@@ -71,17 +71,17 @@ const smoothPredictedData = (
 };
 
 const CongestionChart = ({
-  placeDetail,
+  timeSeries,
   loading,
   error,
   currentTimestamp,
 }: CongestionChartProps) => {
-  const timeSeriesData = placeDetail?.timeSeries.length
+  const timeSeriesData = timeSeries?.length
     ? smoothPredictedData(
-        placeDetail.timeSeries.map((item) => ({
-          time: item.timestamp.getTime(),
-          actual: item.actualScore || null,
-          predicted: item.predictedScore || null,
+        timeSeries.map((t) => ({
+          time: t.timestamp.getTime(),
+          actual: t.actualScore || null,
+          predicted: t.predictedScore || null,
         }))
       )
     : [];

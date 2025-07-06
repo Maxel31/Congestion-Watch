@@ -1,32 +1,23 @@
-import { usePlaceDetail, usePlaces } from "@/hooks/usePlaces";
-import { usePolling } from "@/hooks/usePolling";
-import { useEffect, useState } from "react";
+import CongestionChart from "@/components/CongestionChart";
+import CurrentCongestionCard from "@/components/CurrentCongestionCard";
 import Header from "@/components/Header";
 import PlaceSelector from "@/components/PlaceSelector";
-import CurrentCongestionCard from "@/components/CurrentCongestionCard";
 import StatisticsCard from "@/components/StatisticsCard";
-import CongestionChart from "@/components/CongestionChart";
+import { useTimeSeries } from "@/hooks/usePlaces";
+import { usePolling } from "@/hooks/usePolling";
+import { useEffect, useState } from "react";
+import { places } from "./constants/places";
 
 const Dashboard = () => {
   const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null);
-  const {
-    places,
-    loading: placesLoading,
-    error: placesError,
-    refetch: refreshPlaces,
-  } = usePlaces();
-  const {
-    placeDetail,
-    loading: placeDetailLoading,
-    error: placeDetailError,
-    refetch: refreshPlaceDetail,
-  } = usePlaceDetail(selectedPlaceId || 0);
+  const { timeSeries, loading, error, refetch } = useTimeSeries(
+    selectedPlaceId || 0
+  );
 
   usePolling(
     () => {
-      refreshPlaces();
       if (selectedPlaceId) {
-        refreshPlaceDetail();
+        refetch();
       }
     },
     { interval: 60000 }
@@ -57,29 +48,27 @@ const Dashboard = () => {
           places={places}
           selectedPlaceId={selectedPlaceId}
           onSelectPlace={setSelectedPlaceId}
-          loading={placesLoading}
-          error={placesError}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <CurrentCongestionCard
-            placeDetail={placeDetail}
+            timeSeries={timeSeries}
             selectedPlaceName={selectedPlace?.name || "選択してください"}
-            loading={placeDetailLoading}
-            error={placeDetailError}
+            loading={loading}
+            error={error}
           />
 
           <StatisticsCard
-            placeDetail={placeDetail}
-            loading={placeDetailLoading}
-            error={placeDetailError}
+            timeSeries={timeSeries}
+            loading={loading}
+            error={error}
           />
         </div>
 
         <CongestionChart
-          placeDetail={placeDetail}
-          loading={placeDetailLoading}
-          error={placeDetailError}
+          timeSeries={timeSeries}
+          loading={loading}
+          error={error}
           currentTimestamp={currentTimestamp}
         />
       </div>

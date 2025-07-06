@@ -1,38 +1,35 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlaceDetail } from "@/types/api";
+import { TimeSeries } from "@/types/api";
 import { FileSpreadsheet, TrendingUp } from "lucide-react";
 
 interface StatisticsCardProps {
-  placeDetail: PlaceDetail | null;
+  timeSeries: TimeSeries[] | null;
   loading: boolean;
   error: Error | null;
 }
 
 const StatisticsCard = ({
-  placeDetail,
+  timeSeries,
   loading,
   error,
 }: StatisticsCardProps) => {
   const getCurrentCongestion = () => {
-    if (!placeDetail) return 0;
-    const latestActual = placeDetail.timeSeries
-      .filter((d) => d.actualScore !== undefined)
+    if (!timeSeries) return 0;
+    const latestActual = timeSeries
+      .filter((t) => t.actualScore !== undefined)
       .slice(-1)[0];
     return latestActual?.actualScore || 0;
   };
 
   const getMaxCongestion = () => {
-    if (!placeDetail) return 0;
-    return Math.max(...placeDetail.timeSeries.map((d) => d.actualScore || 0));
+    if (!timeSeries) return 0;
+    return Math.max(...timeSeries.map((t) => t.actualScore || 0));
   };
 
   const getAverageCongestion = () => {
-    if (!placeDetail) return 0;
-    const total = placeDetail.timeSeries.reduce(
-      (sum, d) => sum + (d.actualScore || 0),
-      0
-    );
-    return (total / placeDetail.timeSeries.length).toFixed(1);
+    if (!timeSeries) return 0;
+    const total = timeSeries.reduce((sum, t) => sum + (t.actualScore || 0), 0);
+    return (total / timeSeries.length).toFixed(1);
   };
 
   if (loading) {
