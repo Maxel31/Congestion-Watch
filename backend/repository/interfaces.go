@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/Maxel31/Congestion-Watch/backend/model"
+	"crowdsense/backend/model"
 )
 
 type PlaceRepository interface {
@@ -21,5 +21,5 @@ type WeatherRepository interface {
 }
 
 type CloudDataRepository interface {
-	GetCloudDataByDate(targetDate string) ([]model.CloudData, error)
+	GetCloudDataByDate(placeID int, targetDate string) ([]model.CloudData, error)
 }

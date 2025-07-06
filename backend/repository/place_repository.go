@@ -2,7 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"github.com/Maxel31/Congestion-Watch/backend/model"
+	"crowdsense/backend/model"
 )
 
 type placeRepository struct {
