@@ -6,7 +6,8 @@ export interface Place {
 }
 
 export interface TimeSeries {
-  timestamp: Date;
-  actualScore?: number;
   predictedScore?: number;
+  actualScore?: number;
+  targetDatetime: Date;
+  placeId: number;
 }
