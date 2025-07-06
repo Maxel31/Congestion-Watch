@@ -25,6 +25,7 @@ func connectDB() (*sql.DB, error) {
 	user := os.Getenv("POSTGRES_USER")
 	password := os.Getenv("POSTGRES_PASSWORD")
 	dbname := os.Getenv("POSTGRES_DB")
+	goenv := os.Getenv("GO_ENV")
 
 	if host == "" {
 		host = "localhost"
@@ -33,8 +34,14 @@ func connectDB() (*sql.DB, error) {
 		port = "5432"
 	}
 
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
+	var psqlInfo string
+	if goenv == "development" {
+		psqlInfo = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+			host, port, user, password, dbname)
+	} else {
+		psqlInfo = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s",
+			host, port, user, password, dbname)
+	}
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
