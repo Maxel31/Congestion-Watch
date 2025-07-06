@@ -16,8 +16,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 from sqlalchemy.orm import Session
 
-from config import config
-
+from .config import config
 from .database import DatabaseManager, Sensor
 from .feature_engineering import FeatureEngineer
 
@@ -313,7 +312,7 @@ class CongestionPredictionModel:
         logger.info(f"予測結果をデータベースに保存しました: {len(saved_predictions)}件")
 
     def _calculate_confidence(
-        self, model: RandomForestRegressor, X: np.ndarray | pd.DataFrame
+        self, model: RandomForestRegressor, X: np.ndarray[Any, Any] | pd.DataFrame
     ) -> float:
         """
         予測の信頼度を計算（各決定木の予測のばらつきから）

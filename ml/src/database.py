@@ -21,7 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from config import config
+from .config import config
 
 logger = logging.getLogger(__name__)
 

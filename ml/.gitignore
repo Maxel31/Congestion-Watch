@@ -70,3 +70,6 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# 追加のsqlファイル
+98_seed_test_data_large.sql
