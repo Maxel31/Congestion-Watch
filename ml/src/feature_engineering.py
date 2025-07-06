@@ -38,7 +38,7 @@ class FeatureEngineer:
         """
         # 全場所の情報を取得
         places = self.db_manager.get_all_places(self.db)
-        place_ids = [int(p.id) for p in places]
+        place_ids = [int(p.id) for p in places]  # type: ignore[arg-type]
 
         # 実測データを取得
         actual_scores = self.db_manager.get_actual_scores(
@@ -70,7 +70,7 @@ class FeatureEngineer:
         targets = []
 
         for place in places:
-            place_df = df[df["place_id"] == place.id].copy()
+            place_df = df[df["place_id"] == int(place.id)].copy()  # type: ignore[arg-type]
 
             if len(place_df) < 2:
                 continue
@@ -114,7 +114,7 @@ class FeatureEngineer:
         """
         # 全場所の情報を取得
         places = self.db_manager.get_all_places(self.db)
-        place_ids = [int(p.id) for p in places]
+        place_ids = [int(p.id) for p in places]  # type: ignore[arg-type]
 
         # 過去データを取得（予測時点より前のデータ）
         historical_data = self.db_manager.get_actual_scores(
