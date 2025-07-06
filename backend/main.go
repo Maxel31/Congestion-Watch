@@ -11,6 +11,7 @@ import (
 
 	"crowdsense/backend/repository"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -139,7 +140,15 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/cloud-data/{placeID}/{targetDate}", getCloudDataByDateHandler(cloudDataRepo)).Methods("GET")
 
+	// Setup CORS - allow all origins, headers, and methods
+	corsHandler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"*"}),
+		handlers.AllowCredentials(),
+	)(r)
+
 	fmt.Println("Server starting on :8080")
 	fmt.Println("Test endpoint: http://localhost:8080/api/cloud-data/1/2025-07-05")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":8080", corsHandler))
 }
