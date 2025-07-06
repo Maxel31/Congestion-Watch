@@ -4,7 +4,7 @@ import path from "path";
 import { defineConfig, loadEnv } from "vite";
 
 // https://vite.dev/config/
-export default ({ mode }) => {
+export default ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const API_BASE_URL = env.API_BASE_URL || 'http://backend:8080';
   return defineConfig({
