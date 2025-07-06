@@ -32,14 +32,10 @@ class Config:
     # モデル設定
     MODEL_DIR: str = os.getenv("MODEL_DIR", "models")
 
-    # テスト用設定
-    TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL", "sqlite:///test.db")
 
     @classmethod
-    def get_database_url(cls, for_test: bool = False) -> str:
+    def get_database_url(cls) -> str:
         """データベースURLを取得"""
-        if for_test:
-            return cls.TEST_DATABASE_URL
         return cls.DATABASE_URL
 
     @classmethod
