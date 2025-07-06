@@ -80,13 +80,21 @@ class CongestionPredictionModel:
 
         # 実測データが存在する場所の情報を取得
         places = db_manager.get_all_places(db)
-        actual_places = [place for place in places if int(place.id) in actual_place_ids]  # type: ignore[arg-type]
+        actual_places = [place for place in places if place.id in actual_place_ids]
 
         results = {}
 
-        # 実測データが存在する場所のみでモデルを訓練
+        # 実測データが存在する場所のみでモデルを訓練（場所ID 1-2のみ）
         for place in actual_places:
-            place_id = int(place.id)  # type: ignore[arg-type]
+            place_id = int(place.id)
+
+            # 本番環境では場所IDが3以上の場合は訓練しない
+            if place_id > 2:
+                logger.info(
+                    f"場所 {place.name} (ID: {place_id}) は本番環境対象外のためスキップ"
+                )
+                continue
+
             logger.info(f"場所 {place.name} (ID: {place_id}) のモデル訓練開始")
 
             # 訓練データの準備
@@ -118,14 +126,20 @@ class CongestionPredictionModel:
             )
             model.fit(X_train, y_train)
 
-            # 評価
+            # 評価（時系列予測精度）
             train_pred = model.predict(X_train)
             test_pred = model.predict(X_test)
 
+            # 基本的な評価指標
             train_mae = mean_absolute_error(y_train, train_pred)
             test_mae = mean_absolute_error(y_test, test_pred)
             test_rmse = np.sqrt(mean_squared_error(y_test, test_pred))
             test_r2 = r2_score(y_test, test_pred)
+
+            # 時系列予測精度の評価（連続する時間に対する予測精度）
+            time_series_metrics = self._evaluate_time_series_prediction(
+                model, feature_engineer, place_id, X_test.index
+            )
 
             # 特徴量重要度
             feature_importance = pd.DataFrame(
@@ -144,12 +158,21 @@ class CongestionPredictionModel:
                 "test_mae": float(test_mae),
                 "test_rmse": float(test_rmse),
                 "test_r2": float(test_r2),
+                "time_series_metrics": time_series_metrics,
                 "top_features": feature_importance.head(10).to_dict("records"),
             }
 
+            # 複数時間軸のMAPE情報を含むログ
+            h1_mape = time_series_metrics.get("h1_mape", -1)
+            h2_mape = time_series_metrics.get("h2_mape", -1)
+            h4_mape = time_series_metrics.get("h4_mape", -1)
+            h12_mape = time_series_metrics.get("h12_mape", -1)
+            h24_mape = time_series_metrics.get("h24_mape", -1)
+
             logger.info(
                 f"場所 {place.name} のモデル訓練完了 - "
-                f"MAE: {test_mae:.2f}, RMSE: {test_rmse:.2f}, R2: {test_r2:.3f}"
+                f"MAE: {test_mae:.2f}, RMSE: {test_rmse:.2f}, R2: {test_r2:.3f}, "
+                f"MAPE[1h: {h1_mape:.1f}%, 2h: {h2_mape:.1f}%, 4h: {h4_mape:.1f}%, 12h: {h12_mape:.1f}%, 24h: {h24_mape:.1f}%]"
             )
 
         # 開発環境でのみモデルをファイルに保存
@@ -187,6 +210,13 @@ class CongestionPredictionModel:
         Returns:
             予測結果のリスト
         """
+        # 本番環境では場所IDが3以上の場合は処理しない（最大2つまで）
+        if place_id > 2:
+            logger.warning(
+                f"場所ID {place_id} は本番環境では対応していません（最大ID: 2）"
+            )
+            return []
+
         # モデルが存在しない場合はロード
         if place_id not in self.models:
             if config.is_development():
@@ -231,10 +261,14 @@ class CongestionPredictionModel:
                 logger.warning(f"不要な特徴量を削除: {extra_cols}")
                 X_pred_features = X_pred_features.drop(columns=list(extra_cols))
 
-            # 欠損している特徴量を追加
+            # 欠損している特徴量を追加（パフォーマンス改善）
             missing_cols = set(feature_cols) - set(X_pred_features.columns)
-            for col in missing_cols:
-                X_pred_features[col] = -1  # 欠損値として-1を設定
+            if missing_cols:
+                missing_data = pd.DataFrame(
+                    {col: [-1] * len(X_pred_features) for col in missing_cols},
+                    index=X_pred_features.index,
+                )
+                X_pred_features = pd.concat([X_pred_features, missing_data], axis=1)
 
             # 特徴量カラムの順序を訓練時と同じに揃える
             X_pred_features = X_pred_features.reindex(
@@ -296,7 +330,7 @@ class CongestionPredictionModel:
             return
 
         # 最新のモデルIDを取得
-        latest_model = db_manager.get_latest_model(db, int(sensor.id))  # type: ignore[arg-type]
+        latest_model = db_manager.get_latest_model(db, int(sensor.id))
         if not latest_model:
             logger.warning(f"センサーID {sensor.id} のモデルが見つかりません")
             return
@@ -347,6 +381,139 @@ class CongestionPredictionModel:
             confidence = 0.5
 
         return float(confidence)
+
+    def _evaluate_time_series_prediction(
+        self,
+        model: RandomForestRegressor,
+        feature_engineer: FeatureEngineer,
+        place_id: int,
+        test_indices: Any,
+    ) -> dict[str, float]:
+        """
+        時系列予測精度を評価（1h, 2h, 4h, 12h, 24hの5つの時間軸）
+
+        Args:
+            model: 訓練済みモデル
+            feature_engineer: 特徴量エンジニア
+            place_id: 場所ID
+            test_indices: テストデータのインデックス
+
+        Returns:
+            時系列評価指標の辞書
+        """
+        # 全訓練データを取得
+        X_all, y_all = feature_engineer.prepare_training_data(place_id=place_id)
+
+        data_count = len(X_all)
+        logger.debug(f"時系列評価: 全データ数={data_count}")
+
+        # 1時間 = 12ポイント（5分間隔）
+        points_per_hour = 12
+
+        # 各時間軸での評価（データ末尾から指定時間分を評価）
+        # 1h評価（最新1時間分）
+        h1_start_idx = max(0, data_count - points_per_hour)
+        h1_metrics = self._evaluate_time_horizon(
+            X_all, y_all, model, h1_start_idx, "1h"
+        )
+
+        # 2h評価（最新2時間分）
+        h2_start_idx = max(0, data_count - 2 * points_per_hour)
+        h2_metrics = self._evaluate_time_horizon(
+            X_all, y_all, model, h2_start_idx, "2h"
+        )
+
+        # 4h評価（最新4時間分）
+        h4_start_idx = max(0, data_count - 4 * points_per_hour)
+        h4_metrics = self._evaluate_time_horizon(
+            X_all, y_all, model, h4_start_idx, "4h"
+        )
+
+        # 12h評価（最新12時間分）
+        h12_start_idx = max(0, data_count - 12 * points_per_hour)
+        h12_metrics = self._evaluate_time_horizon(
+            X_all, y_all, model, h12_start_idx, "12h"
+        )
+
+        # 24h評価（最新24時間分）
+        h24_start_idx = max(0, data_count - 24 * points_per_hour)
+        h24_metrics = self._evaluate_time_horizon(
+            X_all, y_all, model, h24_start_idx, "24h"
+        )
+
+        # 結果を返す
+        return {
+            "series_mae": h1_metrics["mae"],
+            "series_rmse": h1_metrics["rmse"],
+            "series_mape": h1_metrics["mape"],
+            "series_length": h1_metrics["length"],
+            # 各時間軸評価
+            "h1_mape": h1_metrics["mape"],
+            "h2_mape": h2_metrics["mape"],
+            "h4_mape": h4_metrics["mape"],
+            "h12_mape": h12_metrics["mape"],
+            "h24_mape": h24_metrics["mape"],
+            # 時間幅情報（固定値）
+            "h1_hours": 1.0,
+            "h2_hours": 2.0,
+            "h4_hours": 4.0,
+            "h12_hours": 12.0,
+            "h24_hours": 24.0,
+        }
+
+    def _evaluate_time_horizon(
+        self,
+        X_all: pd.DataFrame,
+        y_all: pd.Series,
+        model: RandomForestRegressor,
+        start_idx: int,
+        horizon_name: str,
+    ) -> dict[str, float]:
+        """指定された時間軸での評価を実行"""
+        X_series = X_all.iloc[start_idx:]
+        y_series = y_all.iloc[start_idx:]
+
+        # 特徴量の順序を合わせる
+        if self.feature_columns:
+            X_series = X_series.reindex(
+                columns=self.feature_columns, fill_value=-1
+            )
+
+        # 予測実行
+        series_pred = model.predict(X_series)
+
+        # ゼロ除算やNaN値対策
+        y_series_safe = y_series.fillna(1.0)
+        series_pred_safe = np.nan_to_num(series_pred, nan=1.0)
+
+        # 評価指標計算
+        mae = mean_absolute_error(y_series_safe, series_pred_safe)
+        rmse = np.sqrt(mean_squared_error(y_series_safe, series_pred_safe))
+
+        # MAPE計算（ゼロ除算対策）
+        y_safe_for_mape = np.maximum(np.abs(y_series_safe), 0.1)
+        mape = (
+            np.mean(
+                np.abs((y_series_safe - series_pred_safe) / y_safe_for_mape)
+            )
+            * 100
+        )
+
+        # 時間幅を計算（5分間隔と仮定）
+        hours = len(X_series) * 5 / 60
+
+        logger.debug(
+            f"{horizon_name}評価: MAE={mae:.2f}, MAPE={mape:.1f}%, ポイント数={len(X_series)}, 時間幅={hours:.1f}h"
+        )
+
+        return {
+            "mae": float(mae),
+            "rmse": float(rmse),
+            "mape": float(mape),
+            "length": len(X_series),
+            "hours": float(hours),
+        }
+
 
     def _save_models(self) -> None:
         """モデルをファイルに保存"""
@@ -401,7 +568,7 @@ class CongestionPredictionModel:
             return
 
         # 最新のモデル情報を取得
-        latest_model = db_manager.get_latest_model(db, int(sensor.id))  # type: ignore[arg-type]
+        latest_model = db_manager.get_latest_model(db, int(sensor.id))
         if not latest_model:
             logger.warning(f"センサーID {sensor.id} のモデルが見つかりません")
             return
@@ -456,5 +623,7 @@ class CongestionPredictionModel:
             }
 
             db_manager.save_prediction_model(
-                db=db, sensor_id=int(sensor.id), model_params=model_params  # type: ignore[arg-type]
+                db=db,
+                sensor_id=int(sensor.id),
+                model_params=model_params,  # type: ignore[arg-type]
             )

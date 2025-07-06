@@ -4,6 +4,7 @@ MLサービス用設定管理
 
 import os
 from pathlib import Path
+from typing import cast
 
 # ml/.envファイルを読み込み
 from dotenv import load_dotenv
@@ -11,16 +12,16 @@ from dotenv import load_dotenv
 # ml/ディレクトリの.envファイルを読み込み（src/から見て1つ上のディレクトリ）
 ml_dir = Path(__file__).parent.parent
 env_path = ml_dir / ".env"
-load_dotenv(env_path)
-
+load_dotenv(dotenv_path=env_path, override=True)
+print(os.environ)
 
 class Config:
     """MLサービス設定クラス"""
 
     # データベース設定
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/congestion_watch"
-    )
+    DATABASE_URL: str = cast(str, os.getenv(
+        "DATABASE_URL"
+    ))
 
     # MLサービス設定
     ML_PORT: int = int(os.getenv("ML_PORT", "8001"))
@@ -32,14 +33,9 @@ class Config:
     # モデル設定
     MODEL_DIR: str = os.getenv("MODEL_DIR", "models")
 
-    # テスト用設定
-    TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL", "sqlite:///test.db")
-
     @classmethod
-    def get_database_url(cls, for_test: bool = False) -> str:
+    def get_database_url(cls) -> str:
         """データベースURLを取得"""
-        if for_test:
-            return cls.TEST_DATABASE_URL
         return cls.DATABASE_URL
 
     @classmethod

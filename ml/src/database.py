@@ -26,22 +26,15 @@ from .config import config
 logger = logging.getLogger(__name__)
 
 # データベース接続設定
-DATABASE_URL = config.DATABASE_URL
 
 
-def get_engine(for_test: bool = False) -> Any:
-    """エンジンを取得（テスト用/本番用の切り替え対応）"""
-    import os
-
-    if for_test or os.getenv("TEST_DATABASE_URL"):
-        test_url = os.getenv("TEST_DATABASE_URL", "sqlite:///test.db")
-        return create_engine(test_url, echo=False)
-    else:
-        return create_engine(
-            DATABASE_URL,
-            poolclass=NullPool,  # コネクションプーリングを無効化（長時間接続対策）
-            echo=False,
-        )
+def get_engine() -> Any:
+    """エンジンを取得"""
+    return create_engine(
+        config.get_database_url(),
+        poolclass=NullPool,  # コネクションプーリングを無効化（長時間接続対策）
+        echo=False,
+    )
 
 
 # SQLAlchemyエンジンの作成
@@ -51,13 +44,8 @@ engine = get_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def get_session_local(for_test: bool = False) -> Any:
-    """セッションローカルを取得（テスト用/本番用の切り替え対応）"""
-    import os
-
-    if for_test or os.getenv("TEST_DATABASE_URL"):
-        test_engine = get_engine(for_test=True)
-        return sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+def get_session_local() -> Any:
+    """セッションローカルを取得"""
     return SessionLocal
 
 
@@ -155,13 +143,7 @@ class Weather(Base):  # type: ignore
 @contextmanager
 def get_db() -> Generator[Session]:
     """データベースセッションのコンテキストマネージャー"""
-    import os
-
-    if os.getenv("TEST_DATABASE_URL"):
-        session_local = get_session_local(for_test=True)
-        db = session_local()
-    else:
-        db = SessionLocal()
+    db = SessionLocal()
     try:
         yield db
     finally:
@@ -245,6 +227,25 @@ class DatabaseManager:
         )
         db.commit()
         return deleted
+
+    @staticmethod
+    def get_predicted_scores(
+        db: Session,
+        place_id: int | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[PredictedScore]:
+        """予測スコアを取得"""
+        query = db.query(PredictedScore)
+
+        if place_id:
+            query = query.filter(PredictedScore.place_id == place_id)
+        if start_date:
+            query = query.filter(PredictedScore.target_datetime >= start_date)
+        if end_date:
+            query = query.filter(PredictedScore.target_datetime <= end_date)
+
+        return query.order_by(PredictedScore.target_datetime).all()
 
     @staticmethod
     def get_database_status(db: Session, prefix: str = "") -> dict[str, Any]:

@@ -79,21 +79,68 @@ ml/
 
 ## 特徴量
 
-現在実装されている特徴量：
+現在実装されている特徴量（2025-07-06更新）：
 
-1. **時間的特徴**
-   - 時刻（hour, minute）
-   - 曜日（day_of_week）
-   - 日・月（day, month）
+### 1. 基本特徴量
+- **place_id**: 予測対象の場所ID
 
-2. **過去の混雑度統計**
-   - 直近1時間の統計（平均、最大、最小、標準偏差）
-   - 直近3時間の統計（平均、最大）
-   - 前日同時刻の平均
-   - 1週間前同時刻の平均
+### 2. 時系列パターン特徴量
+最新のアプローチでは、`latest_score`への過度な依存を排除し、時系列パターンに重点を置いています。
 
-3. **他場所の混雑度**
-   - 他の場所の直近30分間の統計（平均、最大）
+- **mean_15m**: 直近15分間の混雑度平均値
+- **std_15m**: 直近15分間の混雑度標準偏差
+- **trend_15m**: 直近15分間のトレンド（線形変化率）
+- **mean_30m**: 直近30分間の混雑度平均値
+- **std_30m**: 直近30分間の混雑度標準偏差
+- **trend_30m**: 直近30分間のトレンド（線形変化率）
+- **short_vs_long_ratio**: 短期平均と長期平均の比率（15分/30分）
+- **hour_mean**: 直近1時間の混雑度平均値
+- **position_in_hour_range**: 1時間レンジ内での現在位置（0-1）
+
+### 3. 他場所の混雑度比較（複数場所がある場合のみ）
+- **self_vs_others_ratio**: 自場所の平均と他場所の平均の比率
+  - 場所が1つしかない場合は欠損値（-1）として処理
+
+### 4. 予測誤差特徴量
+- **recent_prediction_error_abs_mean**: 直近1時間の予測誤差絶対値平均
+  - 過去の予測データがない場合は-1
+
+### 特徴量設計の方針
+
+1. **latest_score依存の排除**: 
+   - 以前のバージョンでは`latest_score`が90%の重要度を持っていたが、これを完全に削除
+   - モデルが単純に最新値をコピーするのではなく、時系列パターンから学習するように改善
+
+2. **シンプルで効果的な特徴量**: 
+   - 複雑なモデルパフォーマンス特徴量を削除
+   - 最も重要な時系列パターンのみに絞り込み
+
+3. **単一場所対応**: 
+   - 本番環境で初期状態では場所が1つしかないことを想定
+   - 他場所に依存する特徴量は適切に欠損値処理
+
+4. **欠損値処理**: 
+   - None値は-1に変換してRandomForestで処理
+   - 場所間比較が不可能な場合も-1で統一
+
+### 使用方法
+
+特徴量エンジニアリングは`FeatureEngineer`クラスで自動実行されます：
+
+```python
+from src.feature_engineering import FeatureEngineer
+
+# 訓練データの準備
+engineer = FeatureEngineer(db_session)
+X, y = engineer.prepare_training_data(place_id=1)
+
+# 予測用特徴量の準備
+X_pred = engineer.prepare_prediction_features(
+    place_id=1, 
+    target_datetime=datetime.now(), 
+    prediction_hours=24
+)
+```
 
 ## 予測スケジュール
 
@@ -141,7 +188,7 @@ uv run --frozen pytest test/test_ml.py -v
 # 統合テスト（データベース接続テスト）
 uv run python test/test_database_connection.py
 
-# 型チェック
+# 型チェックい
 uv run --frozen mypy src/ --ignore-missing-imports
 
 # リンティング
