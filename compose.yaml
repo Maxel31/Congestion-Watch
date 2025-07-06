@@ -21,7 +21,6 @@ services:
       - ./backend:/app
     environment:
       GO_ENV: ${ENV}
-      ML_SERVICE_URL: http://ml:5000
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:?err}
