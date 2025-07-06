@@ -24,7 +24,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
       POSTGRES_DB: ${POSTGRES_DB:?err}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   ml:
     build:
