@@ -34,12 +34,6 @@ services:
       - "8001:8001"
     volumes:
       - ./ml:/app
-    environment:
-      - PYTHON_ENV=development
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - ML_PORT=8001
-      - ENV=development
-      - LOG_LEVEL=INFO
     command: ["uv", "run", "python", "main.py", "--server"]
     depends_on:
       postgres:

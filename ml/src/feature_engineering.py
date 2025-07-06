@@ -36,12 +36,26 @@ class FeatureEngineer:
             X: 特徴量DataFrame
             y: ターゲット（混雑度）Series
         """
-        # 全場所の情報を取得
+        # 実測データが存在する場所IDのみを取得
+        from sqlalchemy import text
+
+        actual_places_result = self.db.execute(
+            text("SELECT DISTINCT place_id FROM actual_score ORDER BY place_id")
+        ).fetchall()
+        place_ids = (
+            [row[0] for row in actual_places_result] if actual_places_result else []
+        )
+
+        # 全場所の情報を取得（リレーション用）
         places = self.db_manager.get_all_places(self.db)
-        place_ids = [int(p.id) for p in places]  # type: ignore[arg-type]
 
         # 実測データを取得
         actual_scores = self.db_manager.get_actual_scores(
+            self.db, place_id=place_id, start_date=start_date
+        )
+
+        # 予測データを取得（予測誤差計算用）
+        predicted_scores = self.db_manager.get_predicted_scores(
             self.db, place_id=place_id, start_date=start_date
         )
 
@@ -65,20 +79,48 @@ class FeatureEngineer:
         df["target_datetime"] = pd.to_datetime(df["target_datetime"])
         df = df.sort_values(["place_id", "target_datetime"])
 
+        # 予測データをDataFrameに変換
+        pred_data = []
+        for pred in predicted_scores:
+            pred_data.append(
+                {
+                    "place_id": pred.place_id,
+                    "target_datetime": pred.target_datetime,
+                    "predicted_score": pred.score,
+                    "model_id": pred.model_id,
+                }
+            )
+
+        pred_df = pd.DataFrame(pred_data)
+        if not pred_df.empty:
+            pred_df["target_datetime"] = pd.to_datetime(pred_df["target_datetime"])
+            pred_df = pred_df.sort_values(["place_id", "target_datetime"])
+
         # 特徴量を作成
         features = []
         targets = []
 
         for place in places:
-            place_df = df[df["place_id"] == int(place.id)].copy()  # type: ignore[arg-type]
+            place_df = df[df["place_id"] == place.id].copy()
 
             if len(place_df) < 2:
                 continue
 
             # 各時点での特徴量を作成
             for idx in range(1, len(place_df)):
+                # 該当場所の予測データを取得
+                place_pred_df = (
+                    pred_df[pred_df["place_id"] == place.id]
+                    if not pred_df.empty
+                    else pd.DataFrame()
+                )
+
                 feature_dict = self._create_features(
-                    place_df.iloc[idx], place_df.iloc[:idx], df, place_ids
+                    place_df.iloc[idx],
+                    place_df.iloc[:idx],
+                    df,
+                    place_ids,
+                    place_pred_df,
                 )
 
                 if feature_dict:
@@ -112,12 +154,23 @@ class FeatureEngineer:
         Returns:
             予測用特徴量DataFrame
         """
-        # 全場所の情報を取得
-        places = self.db_manager.get_all_places(self.db)
-        place_ids = [int(p.id) for p in places]  # type: ignore[arg-type]
+        # 実測データが存在する場所IDのみを取得
+        from sqlalchemy import text
+
+        actual_places_result = self.db.execute(
+            text("SELECT DISTINCT place_id FROM actual_score ORDER BY place_id")
+        ).fetchall()
+        place_ids = (
+            [row[0] for row in actual_places_result] if actual_places_result else []
+        )
 
         # 過去データを取得（予測時点より前のデータ）
         historical_data = self.db_manager.get_actual_scores(
+            self.db, end_date=target_datetime
+        )
+
+        # 過去の予測データを取得
+        historical_predictions = self.db_manager.get_predicted_scores(
             self.db, end_date=target_datetime
         )
 
@@ -138,6 +191,23 @@ class FeatureEngineer:
         )
 
         hist_df["target_datetime"] = pd.to_datetime(hist_df["target_datetime"])
+
+        # 過去の予測データをDataFrameに変換
+        hist_pred_df = pd.DataFrame(
+            [
+                {
+                    "place_id": pred.place_id,
+                    "target_datetime": pred.target_datetime,
+                    "predicted_score": pred.score,
+                    "model_id": pred.model_id,
+                }
+                for pred in historical_predictions
+            ]
+        )
+        if not hist_pred_df.empty:
+            hist_pred_df["target_datetime"] = pd.to_datetime(
+                hist_pred_df["target_datetime"]
+            )
 
         # 予測時点を生成（5分間隔、正確な時刻に調整）
         prediction_times = []
@@ -174,11 +244,22 @@ class FeatureEngineer:
             # 過去データ（予測時点より前）
             past_data = hist_df[hist_df["target_datetime"] < pred_time]
 
+            # 該当場所の過去予測データ
+            past_pred_data = (
+                hist_pred_df[
+                    (hist_pred_df["place_id"] == place_id)
+                    & (hist_pred_df["target_datetime"] < pred_time)
+                ]
+                if not hist_pred_df.empty
+                else pd.DataFrame()
+            )
+
             feature_dict = self._create_features(
                 current_record,
                 past_data[past_data["place_id"] == place_id],
                 past_data,
                 place_ids,
+                past_pred_data,
             )
 
             if feature_dict:
@@ -192,7 +273,14 @@ class FeatureEngineer:
         X = pd.DataFrame(features)
         X = self._handle_missing_values(X)
 
-        logger.info(f"予測用特徴量カラム: {list(X.columns)}")
+        # 特徴量の種類別に整理して表示
+        feature_categories = self._categorize_features(list(X.columns))
+        logger.info(f"予測用特徴量数: {len(X.columns)}")
+        for category, feature_list in feature_categories.items():
+            if feature_list:
+                logger.info(
+                    f"  {category}: {len(feature_list)}個 - {feature_list[:5]}{'...' if len(feature_list) > 5 else ''}"
+                )
 
         return X
 
@@ -202,6 +290,7 @@ class FeatureEngineer:
         past_data: pd.DataFrame,
         all_data: pd.DataFrame,
         place_ids: list[int],
+        past_pred_data: pd.DataFrame | None = None,
     ) -> dict[str, Any]:
         """
         単一レコードの特徴量を作成
@@ -211,6 +300,7 @@ class FeatureEngineer:
             past_data: 同じ場所の過去データ
             all_data: 全場所の過去データ
             place_ids: 全場所ID
+            past_pred_data: 同じ場所の過去予測データ
 
         Returns:
             特徴量辞書
@@ -223,82 +313,147 @@ class FeatureEngineer:
         if len(past_data) == 0:
             return features
 
-        # 過去の混雑度統計（時間的特徴は使用せず、短期的なトレンドに特化）
+        # 時系列パターンに重点を置いた特徴量（シンプル版）
         if len(past_data) > 0:
             current_time = current["target_datetime"]
+            past_data_sorted = past_data.sort_values("target_datetime")
+            latest_data = past_data_sorted.iloc[-1]
 
-            # 直近15分の統計
-            cutoff_15m = pd.Timestamp(current_time) - pd.Timedelta(minutes=15)
-            recent_15m = past_data[
-                pd.to_datetime(past_data["target_datetime"]) >= cutoff_15m
-            ]
-            if len(recent_15m) > 0:
-                features["past_15m_mean"] = recent_15m["score"].mean()
-                features["past_15m_max"] = recent_15m["score"].max()
-                features["past_15m_min"] = recent_15m["score"].min()
-                features["past_15m_count"] = len(recent_15m)
-                # トレンド（最近の変化傾向）
-                if len(recent_15m) >= 2:
-                    recent_sorted = recent_15m.sort_values("target_datetime")
-                    features["past_15m_trend"] = (
-                        recent_sorted["score"].iloc[-1] - recent_sorted["score"].iloc[0]
-                    )
+            # 核となる時系列特徴量のみに絞る（最も重要な15分と30分の窓）
+            core_windows = [15, 30]  # 分
+            for minutes_back in core_windows:
+                cutoff = pd.Timestamp(current_time) - pd.Timedelta(minutes=minutes_back)
+                window_data = past_data[
+                    pd.to_datetime(past_data["target_datetime"]) >= cutoff
+                ]
+                if len(window_data) > 0:
+                    features[f"mean_{minutes_back}m"] = window_data["score"].mean()
+                    features[f"std_{minutes_back}m"] = window_data["score"].std()
+                    # トレンド（線形回帰の傾き的な指標）
+                    if len(window_data) >= 2:
+                        sorted_data = window_data.sort_values("target_datetime")
+                        first_score = sorted_data.iloc[0]["score"]
+                        last_score = sorted_data.iloc[-1]["score"]
+                        features[f"trend_{minutes_back}m"] = (
+                            last_score - first_score
+                        ) / max(first_score, 1)
 
-            # 直近1時間の統計
+            # 短期と中期の比較（最も重要な1つの比較のみ）
+            if "mean_15m" in features and "mean_30m" in features:
+                features["short_vs_long_ratio"] = features["mean_15m"] / max(
+                    features["mean_30m"], 1
+                )
+
+            # 直近1時間の全体傾向（シンプルな統計のみ）
             cutoff_1h = pd.Timestamp(current_time) - pd.Timedelta(hours=1)
             recent_1h = past_data[
                 pd.to_datetime(past_data["target_datetime"]) >= cutoff_1h
             ]
             if len(recent_1h) > 0:
-                features["past_1h_mean"] = recent_1h["score"].mean()
-                features["past_1h_max"] = recent_1h["score"].max()
-                features["past_1h_min"] = recent_1h["score"].min()
-                features["past_1h_std"] = recent_1h["score"].std()
-                features["past_1h_count"] = len(recent_1h)
+                features["hour_mean"] = recent_1h["score"].mean()
+                # レンジ内での現在位置
+                hour_max = recent_1h["score"].max()
+                hour_min = recent_1h["score"].min()
+                hour_range = hour_max - hour_min
+                if hour_range > 0:
+                    features["position_in_hour_range"] = (
+                        latest_data["score"] - hour_min
+                    ) / hour_range
 
-            # 直近3時間の統計
-            cutoff_3h = pd.Timestamp(current_time) - pd.Timedelta(hours=3)
-            recent_3h = past_data[
-                pd.to_datetime(past_data["target_datetime"]) >= cutoff_3h
-            ]
-            if len(recent_3h) > 0:
-                features["past_3h_mean"] = recent_3h["score"].mean()
-                features["past_3h_max"] = recent_3h["score"].max()
-                features["past_3h_min"] = recent_3h["score"].min()
-                features["past_3h_std"] = recent_3h["score"].std()
+        # 他の場所との相対関係（場所が複数ある場合のみ、シンプル版）
+        if len(place_ids) > 1:
+            current_time_ts = pd.Timestamp(current["target_datetime"])
+            time_window_start = current_time_ts - pd.Timedelta(minutes=30)
 
-            # 最新値（直近のデータポイント）
-            if len(past_data) > 0:
-                latest_data = past_data.sort_values("target_datetime").iloc[-1]
-                features["latest_score"] = latest_data["score"]
-
-        # 他の場所の混雑度（相関を考慮）- 固定の場所IDセットを使用
-        current_time_ts = pd.Timestamp(current["target_datetime"])
-        time_window_start = current_time_ts - pd.Timedelta(minutes=30)
-
-        # 固定の場所IDセット（1-6の範囲）を使用して一貫性を保つ
-        # 自分自身を除外せず、全場所で同じ特徴量セットを使用
-        fixed_place_ids = [1, 2, 3, 4, 5, 6]
-        for other_place_id in fixed_place_ids:
-            other_recent = all_data[
-                (all_data["place_id"] == other_place_id)
+            # 自分以外の場所の最近の混雑度を取得
+            other_places_data = all_data[
+                (all_data["place_id"] != current["place_id"])
                 & (pd.to_datetime(all_data["target_datetime"]) >= time_window_start)
                 & (pd.to_datetime(all_data["target_datetime"]) <= current_time_ts)
             ]
 
-            # すべての場所IDに対して一貫した特徴量を作成（データがない場合は-1）
-            if len(other_recent) > 0:
-                features[f"place_{other_place_id}_recent_mean"] = other_recent[
-                    "score"
-                ].mean()
-                features[f"place_{other_place_id}_recent_max"] = other_recent[
-                    "score"
-                ].max()
+            if len(other_places_data) > 0:
+                other_mean = other_places_data["score"].mean()
+                # 自分の平均と他の場所の平均の比較（1つの指標のみ）
+                if "mean_15m" in features:
+                    features["self_vs_others_ratio"] = features["mean_15m"] / max(
+                        other_mean, 1
+                    )
             else:
-                features[f"place_{other_place_id}_recent_mean"] = -1
-                features[f"place_{other_place_id}_recent_max"] = -1
+                features["self_vs_others_ratio"] = None
+        else:
+            # 場所が1つしかない場合は欠損値として扱う
+            features["self_vs_others_ratio"] = None
+
+        # 予測誤差特徴量を追加（シンプル版）
+        if past_pred_data is not None and not past_pred_data.empty:
+            current_time_ts = pd.Timestamp(current["target_datetime"])
+
+            # 実測データと予測データをマージして誤差を計算
+            past_actual_with_time = past_data.copy()
+            past_actual_with_time["target_datetime"] = pd.to_datetime(
+                past_actual_with_time["target_datetime"]
+            )
+
+            # 時刻でマージ（内部結合）
+            merged_data = pd.merge(
+                past_actual_with_time[["target_datetime", "score"]],
+                past_pred_data[["target_datetime", "predicted_score"]],
+                on="target_datetime",
+                how="inner",
+            )
+
+            if not merged_data.empty:
+                # 予測誤差を計算（実測値 - 予測値）
+                merged_data["prediction_error"] = (
+                    merged_data["score"] - merged_data["predicted_score"]
+                )
+
+                # 直近の予測誤差統計（最も重要な指標のみ）
+                recent_errors = merged_data[
+                    merged_data["target_datetime"]
+                    >= (current_time_ts - pd.Timedelta(hours=1))
+                ]
+
+                if not recent_errors.empty:
+                    features["recent_prediction_error_abs_mean"] = (
+                        recent_errors["prediction_error"].abs().mean()
+                    )
+                else:
+                    features["recent_prediction_error_abs_mean"] = -1
+            else:
+                features["recent_prediction_error_abs_mean"] = -1
+        else:
+            features["recent_prediction_error_abs_mean"] = -1
 
         return features
+
+    def _categorize_features(self, feature_names: list[str]) -> dict[str, list[str]]:
+        """特徴量をカテゴリ別に分類"""
+        categories: dict[str, list[str]] = {
+            "基本特徴量": [],
+            "時系列パターン": [],
+            "他の場所の混雑度": [],
+            "予測誤差": [],
+            "その他": [],
+        }
+
+        for feature in feature_names:
+            if feature == "place_id":
+                categories["基本特徴量"].append(feature)
+            elif any(keyword in feature for keyword in ["self_vs_others_"]):
+                categories["他の場所の混雑度"].append(feature)
+            elif any(
+                prefix in feature
+                for prefix in ["mean_", "std_", "trend_", "ratio", "hour_", "position_"]
+            ):
+                categories["時系列パターン"].append(feature)
+            elif any(keyword in feature for keyword in ["prediction_error"]):
+                categories["予測誤差"].append(feature)
+            else:
+                categories["その他"].append(feature)
+
+        return categories
 
     def _handle_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -310,7 +465,15 @@ class FeatureEngineer:
         Returns:
             欠損値処理済みのDataFrame
         """
-        # 数値カラムの欠損値を-1で埋める（RandomForestで扱えるように）
+        # 他の場所に依存する特徴量の特別処理
+        other_place_features = ["self_vs_others_ratio"]
+
+        for feature in other_place_features:
+            if feature in df.columns:
+                # 場所が1つしかない場合や他の場所のデータがない場合のNone値を-1で埋める
+                df[feature] = df[feature].fillna(-1)
+
+        # その他の数値カラムの欠損値を-1で埋める（RandomForestで扱えるように）
         numeric_columns = df.select_dtypes(include=[np.number]).columns
         df[numeric_columns] = df[numeric_columns].fillna(-1)
 
