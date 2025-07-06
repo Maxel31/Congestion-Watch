@@ -3,19 +3,19 @@ import { TimeSeries } from "@/types/api";
 import { Users } from "lucide-react";
 import SpeedMeter from "./SpeedMeter";
 
-interface CurrentCongestionCardProps {
+interface CurrentStatusCardProps {
   timeSeries: TimeSeries[] | null;
   selectedPlaceName: string;
   loading: boolean;
   error: Error | null;
 }
 
-const CurrentCongestionCard = ({
+const CurrentStatusCard = ({
   timeSeries: timeSeries,
   selectedPlaceName,
   loading,
   error,
-}: CurrentCongestionCardProps) => {
+}: CurrentStatusCardProps) => {
   const getCurrentCongestion = () => {
     if (!timeSeries) return undefined;
     const latestActual = timeSeries
@@ -49,4 +49,4 @@ const CurrentCongestionCard = ({
   );
 };
 
-export default CurrentCongestionCard;
+export default CurrentStatusCard;

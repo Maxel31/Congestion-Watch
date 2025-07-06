@@ -1,5 +1,5 @@
-import CongestionChart from "@/components/CongestionChart";
-import CurrentCongestionCard from "@/components/CurrentCongestionCard";
+import ChartCard from "@/components/ChartCard";
+import CurrentStatusCard from "@/components/CurrentStatusCard";
 import Header from "@/components/Header";
 import PlaceSelector from "@/components/PlaceSelector";
 import StatisticsCard from "@/components/StatisticsCard";
@@ -51,7 +51,7 @@ const Dashboard = () => {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <CurrentCongestionCard
+          <CurrentStatusCard
             timeSeries={timeSeries}
             selectedPlaceName={selectedPlace?.name || "選択してください"}
             loading={loading}
@@ -65,7 +65,7 @@ const Dashboard = () => {
           />
         </div>
 
-        <CongestionChart
+        <ChartCard
           timeSeries={timeSeries}
           loading={loading}
           error={error}

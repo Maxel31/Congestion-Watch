@@ -15,7 +15,7 @@ import {
   YAxis,
 } from "recharts";
 
-interface CongestionChartProps {
+interface ChartCardProps {
   timeSeries: TimeSeries[] | null;
   loading: boolean;
   error: Error | null;
@@ -70,12 +70,12 @@ const smoothPredictedData = (
   return smoothedData;
 };
 
-const CongestionChart = ({
+const ChartCard = ({
   timeSeries,
   loading,
   error,
   currentTimestamp,
-}: CongestionChartProps) => {
+}: ChartCardProps) => {
   const timeSeriesData = timeSeries?.length
     ? smoothPredictedData(
         timeSeries.map((t) => ({
@@ -199,4 +199,4 @@ const CongestionChart = ({
   );
 };
 
-export default CongestionChart;
+export default ChartCard;
