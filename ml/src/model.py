@@ -80,16 +80,17 @@ class CongestionPredictionModel:
 
         # 実測データが存在する場所の情報を取得
         places = db_manager.get_all_places(db)
-        actual_places = [place for place in places if place.id in actual_place_ids]
+        actual_places = [place for place in places if int(place.id) in actual_place_ids]  # type: ignore[arg-type]
 
         results = {}
 
         # 実測データが存在する場所のみでモデルを訓練
         for place in actual_places:
-            logger.info(f"場所 {place.name} (ID: {place.id}) のモデル訓練開始")
+            place_id = int(place.id)  # type: ignore[arg-type]
+            logger.info(f"場所 {place.name} (ID: {place_id}) のモデル訓練開始")
 
             # 訓練データの準備
-            X, y = feature_engineer.prepare_training_data(place_id=int(place.id))
+            X, y = feature_engineer.prepare_training_data(place_id=place_id)
 
             if len(X) < 10:
                 logger.warning(
@@ -107,7 +108,14 @@ class CongestionPredictionModel:
             )
 
             # モデル訓練
-            model = RandomForestRegressor(**self.model_params)
+            model = RandomForestRegressor(
+                n_estimators=self.model_params["n_estimators"],
+                max_depth=self.model_params["max_depth"],
+                min_samples_split=self.model_params["min_samples_split"],
+                min_samples_leaf=self.model_params["min_samples_leaf"],
+                random_state=self.model_params["random_state"],
+                n_jobs=self.model_params["n_jobs"],
+            )
             model.fit(X_train, y_train)
 
             # 評価
@@ -125,10 +133,10 @@ class CongestionPredictionModel:
             ).sort_values("importance", ascending=False)
 
             # モデルを保存
-            self.models[int(place.id)] = model
+            self.models[place_id] = model
 
             # 結果を記録
-            results[int(place.id)] = {
+            results[place_id] = {
                 "place_name": place.name,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test),
@@ -149,9 +157,7 @@ class CongestionPredictionModel:
             self._save_models()
 
         # データベースにモデル情報を保存
-        self._save_model_info_to_db(
-            db, db_manager, {int(k): v for k, v in results.items()}
-        )
+        self._save_model_info_to_db(db, db_manager, results)
 
         # 学習結果を返す
         train_result = {
@@ -290,7 +296,7 @@ class CongestionPredictionModel:
             return
 
         # 最新のモデルIDを取得
-        latest_model = db_manager.get_latest_model(db, int(sensor.id))
+        latest_model = db_manager.get_latest_model(db, int(sensor.id))  # type: ignore[arg-type]
         if not latest_model:
             logger.warning(f"センサーID {sensor.id} のモデルが見つかりません")
             return
@@ -336,7 +342,7 @@ class CongestionPredictionModel:
         # 変動係数の逆数を信頼度とする（最大1に正規化）
         if mean > 0:
             cv = std / mean
-            confidence = min(1.0, 1.0 / (1.0 + cv))
+            confidence = min(1.0, 1.0 / (1.0 + float(cv)))
         else:
             confidence = 0.5
 
@@ -395,7 +401,7 @@ class CongestionPredictionModel:
             return
 
         # 最新のモデル情報を取得
-        latest_model = db_manager.get_latest_model(db, int(sensor.id))
+        latest_model = db_manager.get_latest_model(db, int(sensor.id))  # type: ignore[arg-type]
         if not latest_model:
             logger.warning(f"センサーID {sensor.id} のモデルが見つかりません")
             return
@@ -450,5 +456,5 @@ class CongestionPredictionModel:
             }
 
             db_manager.save_prediction_model(
-                db=db, sensor_id=int(sensor.id), model_params=model_params
+                db=db, sensor_id=int(sensor.id), model_params=model_params  # type: ignore[arg-type]
             )

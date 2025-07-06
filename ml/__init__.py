@@ -1,1 +1,3 @@
-"""機械学習モジュール"""
+"""
+Congestion Watch ML Package
+"""
