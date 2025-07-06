@@ -1,0 +1,29 @@
+# データ処理・分析
+numpy==1.26.4
+pandas==2.2.2
+pandas-stubs==2.2.2.240603
+scikit-learn==1.5.1
+
+# 機械学習フレームワーク
+torch==2.3.1
+xgboost==2.0.3
+lightgbm==4.4.0
+
+# データベース接続
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.31
+
+# API・スケジューリング
+fastapi==0.111.0
+uvicorn==0.30.1
+apscheduler==3.10.4
+
+# ユーティリティ
+python-dotenv==1.0.1
+pydantic==2.8.2
+requests==2.32.3
+
+# テスト
+pytest==8.2.2
+pytest-asyncio==0.23.7
+httpx==0.27.0
