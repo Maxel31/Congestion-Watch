@@ -34,7 +34,7 @@ jobs:
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}/frontend
-          dockerfilePath: frontend/docker/Dockerfile.prod
+          dockerfilePath: docker/Dockerfile.prod
           _dockerfilePathKey_: _dockerfilePath_
           _targetLabelKey_: _targetLabel_
           registryUrl: congestionwatch.azurecr.io
