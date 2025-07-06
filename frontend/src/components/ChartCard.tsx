@@ -193,8 +193,7 @@ const ChartCard = ({
                   <ReferenceLine
                     x={currentTimestamp}
                     stroke="#6b7280"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
+                    strokeWidth={3}
                   />
                   <ReferenceLine
                     y={100}

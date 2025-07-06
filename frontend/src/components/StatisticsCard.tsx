@@ -17,25 +17,24 @@ const StatisticsCard = ({
 }: StatisticsCardProps) => {
   const isOpen = (timestamp: Date) => {
     if (!place?.opens) return false;
-
     const dayOfWeek = timestamp.getDay();
-    const currentTime = timestamp.getHours() * 100 + timestamp.getMinutes();
-
+    const currentTime =
+      timestamp.getHours() * 60 * 60 * 1000 +
+      timestamp.getMinutes() * 60 * 1000;
     const todayHours = place.opens[dayOfWeek];
     if (!todayHours) return false;
-
     return todayHours.some(([start, end]) => {
       return currentTime >= start && currentTime <= end;
     });
   };
 
   const getFutureOpenPeak = () => {
-    if (!timeSeries) return { score: 0, time: null };
+    if (!timeSeries || !place?.opens) return { score: 0, time: null };
 
     const now = new Date();
     const futureOpenTimeSeries = timeSeries
       .filter((t) => t.timestamp >= now && isOpen(t.timestamp))
-      .filter((t) => t.predictedScore !== undefined);
+      .filter((t) => t.predictedScore !== undefined && t.predictedScore > 0);
 
     if (futureOpenTimeSeries.length === 0) return { score: 0, time: null };
 
@@ -98,7 +97,7 @@ const StatisticsCard = ({
     });
   };
 
-  const getCrowdnessColor = (value: number) => {
+  const getCongestionColor = (value: number) => {
     if (value <= 30) return "#22c55e";
     if (value <= 60) return "#f59e0b";
     if (value <= 80) return "#f97316";
@@ -124,38 +123,38 @@ const StatisticsCard = ({
         ) : (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">今後の最高混雑度</span>
+              <span className="text-sm text-gray-600">今後のピーク時間</span>
               <div>
-                {getFutureOpenPeak().score > 0 ? (
+                {getFutureOpenPeak().time ? (
                   <>
-                    <span
-                      className="text-xl font-bold"
+                    <span className="text-xl font-bold">
+                      {formatTime(getFutureOpenPeak().time)}
+                    </span>
+                    <div
+                      className="text-xs text-gray-400"
                       style={{
-                        color: getCrowdnessColor(getFutureOpenPeak().score),
+                        color: getCongestionColor(getFutureOpenPeak().score),
                       }}
                     >
-                      {getFutureOpenPeak().score}%
-                    </span>
-                    <div className="text-xs text-gray-400">
-                      {formatTime(getFutureOpenPeak().time)}
+                      {(getFutureOpenPeak().score || 0) + "%"}
                     </div>
                   </>
                 ) : (
-                  <span className="text-sm text-gray-500">本日営業終了</span>
+                  <span className="text-sm text-gray-500">営業終了</span>
                 )}
               </div>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">今日の最高混雑度</span>
+              <span className="text-sm text-gray-600">今日のピーク時間</span>
               <div>
-                <span
-                  className="text-xl font-bold"
-                  style={{ color: getCrowdnessColor(getTodaysPeak().score) }}
+                <span className="text-xl font-bold">
+                  {formatTime(getTodaysPeak().time)}
+                </span>
+                <div
+                  className="text-xs text-gray-400"
+                  style={{ color: getCongestionColor(getTodaysPeak().score) }}
                 >
                   {getTodaysPeak().score}%
-                </span>
-                <div className="text-xs text-gray-400">
-                  {formatTime(getTodaysPeak().time)}
                 </div>
               </div>
             </div>
@@ -164,7 +163,7 @@ const StatisticsCard = ({
               <span
                 className="text-xl font-bold"
                 style={{
-                  color: getCrowdnessColor(Number(getAverageCongestion())),
+                  color: getCongestionColor(Number(getAverageCongestion())),
                 }}
               >
                 {getAverageCongestion()}%
