@@ -7,8 +7,6 @@ services:
       - "5173:5173"
     depends_on:
       - backend
-    environment:
-      - REACT_APP_API_URL=http://localhost:8080
 
   backend:
     build:
