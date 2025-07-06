@@ -69,23 +69,23 @@ def main() -> None:
         train_models()
     elif args.predict:
         predict_models()
-    elif args.server:
-        logger.info("MLサービスをサーバーモードで起動しました（バッチ処理待機中）")
-        logger.info("使用方法:")
-        logger.info("  docker exec <container> uv run python main.py --train")
-        logger.info("  docker exec <container> uv run python main.py --predict")
+    # elif args.server:
+    #     logger.info("MLサービスをサーバーモードで起動しました（バッチ処理待機中）")
+    #     logger.info("使用方法:")
+    #     logger.info("  docker exec <container> uv run python main.py --train")
+    #     logger.info("  docker exec <container> uv run python main.py --predict")
 
-        # コンテナを起動状態に保つ
-        import time
+    #     # コンテナを起動状態に保つ
+    #     import time
 
-        try:
-            while True:
-                time.sleep(60)  # 1分間隔でスリープ
-                logger.debug("MLサービス待機中...")
-        except KeyboardInterrupt:
-            logger.info("MLサービスを終了します")
-    else:
-        parser.print_help()
+    #     try:
+    #         while True:
+    #             time.sleep(60)  # 1分間隔でスリープ
+    #             logger.debug("MLサービス待機中...")
+    #     except KeyboardInterrupt:
+    #         logger.info("MLサービスを終了します")
+    # else:
+    #     parser.print_help()
 
 
 if __name__ == "__main__":

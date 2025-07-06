@@ -27,8 +27,8 @@ services:
 
   ml:
     build:
-      context: .
-      dockerfile: ml/docker/Dockerfile
+      context: ml
+      dockerfile: docker/Dockerfile
     ports:
       - "8001:8001"
     volumes:
