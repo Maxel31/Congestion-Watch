@@ -7,6 +7,7 @@ import { defineConfig, loadEnv } from "vite";
 export default ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const API_BASE_URL = env.API_BASE_URL || 'http://backend:8080';
+  console.log(`Using API base URL: ${API_BASE_URL}`);
   return defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: {
