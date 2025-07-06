@@ -1,8 +1,8 @@
 FROM node:22-alpine AS build-stage
 WORKDIR /app
-COPY frontend/package.json frontend/yarn.lock ./
+COPY package.json yarn.lock ./
 RUN yarn install
-COPY frontend/ .
+COPY . .
 RUN yarn build
 
 FROM busybox:1.37

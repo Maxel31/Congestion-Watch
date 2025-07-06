@@ -1,8 +1,8 @@
 services:
   frontend:
     build:
-      context: .
-      dockerfile: frontend/docker/Dockerfile.prod
+      context: frontend
+      dockerfile: docker/Dockerfile.prod
     ports:
       - "5173:5173"
     depends_on:
