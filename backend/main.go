@@ -2,12 +2,16 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"strconv"
 
 	"crowdsense/backend/repository"
 
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -43,6 +47,35 @@ func connectDB() (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func getCloudDataByDateHandler(cloudDataRepo repository.CloudDataRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		placeIDStr := vars["placeID"]
+		targetDate := vars["targetDate"]
+
+		fmt.Printf("Request received - PlaceID: %s, TargetDate: %s\n", placeIDStr, targetDate)
+
+		placeID, err := strconv.Atoi(placeIDStr)
+		if err != nil {
+			fmt.Printf("Error parsing placeID: %v\n", err)
+			http.Error(w, "Invalid place ID", http.StatusBadRequest)
+			return
+		}
+
+		cloudData, err := cloudDataRepo.GetCloudDataByDate(placeID, targetDate)
+		if err != nil {
+			fmt.Printf("Error getting cloud data: %v\n", err)
+			http.Error(w, fmt.Sprintf("Failed to get cloud data: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Printf("Successfully retrieved %d cloud data records\n", len(cloudData))
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(cloudData)
+	}
 }
 
 func main() {
@@ -95,45 +128,11 @@ func main() {
 	fmt.Printf("Latest weather records: %d\n", len(weather))
 	fmt.Printf("%+v\n", weather)
 
-	// 特定の場所と日にちのcloud_dataを取得
-	targetDate := "2025-07-05"
-	var placeID int = 1
+	// Setup HTTP server
+	r := mux.NewRouter()
+	r.HandleFunc("/api/cloud-data/{placeID}/{targetDate}", getCloudDataByDateHandler(cloudDataRepo)).Methods("GET")
 
-	fmt.Printf("no loop\n")
-	cloudData, err := cloudDataRepo.GetCloudDataByDate(placeID, targetDate)
-	if err != nil {
-		log.Printf("Failed to get cloud data for place %d: %v", placeID, err)
-		return
-	}
-	fmt.Printf("\nCloud data for %s (Place: %d): %d records\n", targetDate, placeID, len(cloudData))
-	for _, cd := range cloudData {
-		fmt.Printf("Place ID: %d, Time: %s", cd.PlaceID, cd.TargetDatetime.Format("2006-01-02 15:04:05"))
-		if cd.ActualScore != nil {
-			fmt.Printf(", Actual: %d", *cd.ActualScore)
-		}
-		if cd.PredictedScore != nil {
-			fmt.Printf(", Predicted: %d", *cd.PredictedScore)
-		}
-		fmt.Println()
-	}
-
-	// for _, place := range places {
-	// 	fmt.Printf("\n(Place: %v)", place.ID)
-	// 	cloudData, err := cloudDataRepo.GetCloudDataByDate(place.ID, targetDate)
-	// 	// cloudData, err := cloudDataRepo.GetCloudDataByDate(placeID, targetDate)
-	// 	if err != nil {
-	// 		log.Printf("Failed to get cloud data for place %d: %v", place.ID, err)
-	// 	}
-	// 	fmt.Printf("\nCloud data for %s (Place: %s): %d records\n", targetDate, place.Name, len(cloudData))
-	// 	for _, cd := range cloudData {
-	// 		fmt.Printf("Place ID: %d, Time: %s", cd.PlaceID, cd.TargetDatetime.Format("2006-01-02 15:04:05"))
-	// 		if cd.ActualScore != nil {
-	// 			fmt.Printf(", Actual: %d", *cd.ActualScore)
-	// 		}
-	// 		if cd.PredictedScore != nil {
-	// 			fmt.Printf(", Predicted: %d", *cd.PredictedScore)
-	// 		}
-	// 		fmt.Println()
-	// 	}
-	// }
+	fmt.Println("Server starting on :8080")
+	fmt.Println("Test endpoint: http://localhost:8080/api/cloud-data/1/2025-07-05")
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
