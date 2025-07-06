@@ -1,18 +1,18 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TimeSeries } from "@/types/api";
+import { Place, TimeSeries } from "@/types/api";
 import { Users } from "lucide-react";
 import SpeedMeter from "./SpeedMeter";
 
 interface CurrentStatusCardProps {
   timeSeries: TimeSeries[] | null;
-  selectedPlaceName: string;
+  selectedPlace: Place | null;
   loading: boolean;
   error: Error | null;
 }
 
 const CurrentStatusCard = ({
   timeSeries: timeSeries,
-  selectedPlaceName,
+  selectedPlace: selectedPlace,
   loading,
   error,
 }: CurrentStatusCardProps) => {
@@ -24,12 +24,42 @@ const CurrentStatusCard = ({
     return latestActual?.actualScore;
   };
 
+  const isCurrentlyOpen = () => {
+    if (!selectedPlace?.opens) return false;
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const currentTime =
+      now.getHours() * 60 * 60 * 1000 + now.getMinutes() * 60 * 1000;
+
+    const todayHours = selectedPlace.opens[dayOfWeek];
+    if (!todayHours) return false;
+
+    return todayHours.some(([start, end]) => {
+      return currentTime >= start && currentTime <= end;
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Users className="w-5 h-5 mr-2" />
-          現在の混雑度 - {selectedPlaceName}
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Users className="w-5 h-5 mr-2" />
+            現在の混雑度 -{" "}
+            {selectedPlace ? selectedPlace.name : "選択してください"}
+          </div>
+          {selectedPlace && (
+            <span
+              className={`text-sm px-2 py-1 rounded-full ${
+                isCurrentlyOpen()
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {isCurrentlyOpen() ? "営業中" : "営業外"}
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex justify-center h-32">
@@ -42,7 +72,9 @@ const CurrentStatusCard = ({
             <div className="text-red-500">エラー: {error.message}</div>
           </div>
         ) : (
-          <SpeedMeter value={getCurrentCongestion()} />
+          <>
+            <SpeedMeter value={getCurrentCongestion()} />
+          </>
         )}
       </CardContent>
     </Card>

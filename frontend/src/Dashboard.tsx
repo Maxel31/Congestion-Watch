@@ -23,7 +23,7 @@ const Dashboard = () => {
     { interval: 60000 }
   );
 
-  const selectedPlace = places.find((p) => p.id === selectedPlaceId);
+  const selectedPlace = places.find((p) => p.id === selectedPlaceId) || null;
   const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
 
   useEffect(() => {
@@ -53,7 +53,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <CurrentStatusCard
             timeSeries={timeSeries}
-            selectedPlaceName={selectedPlace?.name || "選択してください"}
+            selectedPlace={selectedPlace}
             loading={loading}
             error={error}
           />
