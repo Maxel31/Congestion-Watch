@@ -5,14 +5,14 @@ import SpeedMeter from "./SpeedMeter";
 
 interface CurrentStatusCardProps {
   timeSeries: TimeSeries[] | null;
-  selectedPlace: Place | null;
+  place: Place | null;
   loading: boolean;
   error: Error | null;
 }
 
 const CurrentStatusCard = ({
-  timeSeries: timeSeries,
-  selectedPlace: selectedPlace,
+  timeSeries,
+  place,
   loading,
   error,
 }: CurrentStatusCardProps) => {
@@ -25,14 +25,14 @@ const CurrentStatusCard = ({
   };
 
   const isCurrentlyOpen = () => {
-    if (!selectedPlace?.opens) return false;
+    if (!place?.opens) return false;
 
     const now = new Date();
     const dayOfWeek = now.getDay();
     const currentTime =
       now.getHours() * 60 * 60 * 1000 + now.getMinutes() * 60 * 1000;
 
-    const todayHours = selectedPlace.opens[dayOfWeek];
+    const todayHours = place.opens[dayOfWeek];
     if (!todayHours) return false;
 
     return todayHours.some(([start, end]) => {
@@ -46,10 +46,9 @@ const CurrentStatusCard = ({
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center">
             <Users className="w-5 h-5 mr-2" />
-            現在の混雑度 -{" "}
-            {selectedPlace ? selectedPlace.name : "選択してください"}
+            現在の混雑度 - {place ? place.name : "選択してください"}
           </div>
-          {selectedPlace && (
+          {place && (
             <span
               className={`text-sm px-2 py-1 rounded-full ${
                 isCurrentlyOpen()

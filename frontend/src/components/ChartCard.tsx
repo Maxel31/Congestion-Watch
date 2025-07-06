@@ -4,12 +4,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { TimeSeries } from "@/types/api";
+import { Place, TimeSeries } from "@/types/api";
 import { ChartLine } from "lucide-react";
 import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   XAxis,
   YAxis,
@@ -17,6 +18,7 @@ import {
 
 interface ChartCardProps {
   timeSeries: TimeSeries[] | null;
+  place: Place | null;
   loading: boolean;
   error: Error | null;
   currentTimestamp: number;
@@ -72,6 +74,7 @@ const smoothPredictedData = (
 
 const ChartCard = ({
   timeSeries,
+  place,
   loading,
   error,
   currentTimestamp,
@@ -85,6 +88,28 @@ const ChartCard = ({
         }))
       )
     : [];
+
+  const getOpenAreas = () => {
+    if (!place?.opens) return [];
+    const areas: { x1: number; x2: number }[] = [];
+    const today = new Date();
+    const startOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    place.opens[new Date().getDay()].forEach(([start, end]) => {
+      areas.push({
+        x1: startOfDay.getTime() + start,
+        x2: startOfDay.getTime() + end,
+      });
+    });
+    return areas;
+  };
 
   return (
     <Card>
@@ -120,11 +145,24 @@ const ChartCard = ({
                 ></div>
                 <span className="text-sm text-gray-600">予測値</span>
               </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full opacity-30"></div>
+                <span className="text-sm text-gray-600">営業時間</span>
+              </div>
             </div>
             <div className="w-full">
               <ChartContainer config={chartConfig} className="h-96 w-full">
                 <LineChart data={timeSeriesData}>
                   <CartesianGrid strokeDasharray="3 3" />
+                  {getOpenAreas().map((area, index) => (
+                    <ReferenceArea
+                      key={index}
+                      x1={area.x1}
+                      x2={area.x2}
+                      fill="#10b981"
+                      fillOpacity={0.1}
+                    />
+                  ))}
                   <XAxis
                     dataKey="time"
                     tickLine={false}

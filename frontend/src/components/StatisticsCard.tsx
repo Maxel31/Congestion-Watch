@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TimeSeries } from "@/types/api";
+import { Place, TimeSeries } from "@/types/api";
 import { FileSpreadsheet } from "lucide-react";
 
 interface StatisticsCardProps {
   timeSeries: TimeSeries[] | null;
+  place: Place | null;
   loading: boolean;
   error: Error | null;
 }

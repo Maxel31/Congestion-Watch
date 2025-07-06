@@ -30,7 +30,7 @@ const Dashboard = () => {
     if (places.length > 0 && selectedPlaceId === null) {
       setSelectedPlaceId(places[0].id);
     }
-  }, [places, selectedPlaceId]);
+  }, [selectedPlaceId]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -53,13 +53,14 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <CurrentStatusCard
             timeSeries={timeSeries}
-            selectedPlace={selectedPlace}
+            place={selectedPlace}
             loading={loading}
             error={error}
           />
 
           <StatisticsCard
             timeSeries={timeSeries}
+            place={selectedPlace}
             loading={loading}
             error={error}
           />
@@ -67,6 +68,7 @@ const Dashboard = () => {
 
         <ChartCard
           timeSeries={timeSeries}
+          place={selectedPlace}
           loading={loading}
           error={error}
           currentTimestamp={currentTimestamp}
