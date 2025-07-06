@@ -1,8 +1,8 @@
 services:
   frontend:
     build:
-      context: .
-      dockerfile: frontend/docker/Dockerfile
+      context: frontend
+      dockerfile: docker/Dockerfile
     ports:
       - "5173:5173"
     volumes:

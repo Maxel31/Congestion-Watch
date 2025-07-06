@@ -4,19 +4,18 @@ name: Trigger auto deployment for frontend
 on:
   # Automatically trigger it when detected changes in repo
   push:
-    branches: 
-      [ develop ]
+    branches: [develop]
     paths:
-    - '**'
-    - '.github/workflows/frontend-AutoDeployTrigger-ea7744ed-6cb3-47ba-b623-c05623ddf233.yml'
+      - "**"
+      - ".github/workflows/frontend-AutoDeployTrigger-ea7744ed-6cb3-47ba-b623-c05623ddf233.yml"
 
-  # Allow manual trigger 
-  workflow_dispatch:      
+  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions: 
+    permissions:
       id-token: write #This is required for requesting the OIDC JWT Token
       contents: read #Required when GH token is used to authenticate with private repo
 
@@ -34,7 +33,8 @@ jobs:
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}/frontend/docker/Dockerfile.prod
+          appSourcePath: ${{ github.workspace }}/frontend
+          dockerfilePath: frontend/docker/Dockerfile.prod
           _dockerfilePathKey_: _dockerfilePath_
           _targetLabelKey_: _targetLabel_
           registryUrl: congestionwatch.azurecr.io
@@ -45,5 +45,3 @@ jobs:
           imageToBuild: congestionwatch.azurecr.io/frontend:${{ github.sha }}
           _buildArgumentsKey_: |
             _buildArgumentsValues_
-
-
