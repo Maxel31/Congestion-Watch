@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
 
-const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://backend:8080/api';
+const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://backend:8080';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,11 +14,14 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
+    port: 5173,
     proxy: {
       '/api': {
         target: API_BASE_URL,
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
       }
     }
   }
