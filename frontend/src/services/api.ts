@@ -28,7 +28,7 @@ class ApiService {
     return response.map(item => ({
       predictedScore: item.predicted_score,
       actualScore: item.actual_score,
-      targetDatetime: new Date(item.target_datetime),
+      targetDatetime: new Date(new Date(item.target_datetime).getTime() - 9 * 60 * 60 * 1000),
       placeId: item.place_id
     }));
   }
