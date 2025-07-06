@@ -42,7 +42,7 @@ const Dashboard = () => {
     { interval: 60000 }
   );
 
-  const selectedPlace = places.find((f) => f.id === selectedPlaceId);
+  const selectedPlace = places.find((p) => p.id === selectedPlaceId);
 
   const smoothPredictedData = (
     data: Array<{
@@ -175,13 +175,6 @@ const Dashboard = () => {
     },
   };
 
-  const [currentTime, setCurrentTime] = useState<string>(
-    new Date().toLocaleTimeString("ja-JP", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  );
-
   const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
 
   useEffect(() => {
@@ -192,16 +185,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString("ja-JP", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
-      setCurrentTimestamp(now.getTime());
+      setCurrentTimestamp(new Date().getTime());
     }, 10000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -216,7 +201,12 @@ const Dashboard = () => {
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Clock className="w-4 h-4" />
-            <span>{currentTime}</span>
+            <span>
+              {new Date(currentTimestamp).toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
           </div>
         </div>
 
@@ -227,19 +217,19 @@ const Dashboard = () => {
               施設選択
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex justify-center h-16">
             {placesLoading ? (
-              <div className="flex justify-center items-center h-32">
+              <div className="flex justify-center items-center">
                 <div className="text-gray-500">読み込み中...</div>
               </div>
             ) : placesError ? (
-              <div className="flex justify-center items-center h-32">
+              <div className="flex justify-center items-center">
                 <div className="text-red-500">
                   エラー: {placesError.message}
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 w-full">
                 {places.map((place) => {
                   return (
                     <button
@@ -272,19 +262,19 @@ const Dashboard = () => {
                 現在の混雑度 - {selectedPlace?.name || "選択してください"}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex justify-center">
+            <CardContent className="flex justify-center h-32">
               {placeDetailLoading ? (
-                <div className="flex justify-center items-center h-64">
+                <div className="flex justify-center items-center">
                   <div className="text-gray-500">読み込み中...</div>
                 </div>
               ) : placeDetailError ? (
-                <div className="flex justify-center items-center h-64">
+                <div className="flex justify-center items-center">
                   <div className="text-red-500">
                     エラー: {placeDetailError.message}
                   </div>
                 </div>
               ) : (
-                <div className="h-32 w-full">
+                <div className="w-full">
                   <SpeedMeter
                     value={
                       placeDetail?.timeSeries
@@ -396,7 +386,6 @@ const Dashboard = () => {
                         type="number"
                         scale="time"
                         domain={["dataMin", "dataMax"]}
-                        // interval={0}
                         ticks={Array.from({ length: 24 }, (_, i) => {
                           const startOfDay = new Date();
                           startOfDay.setHours(0, 0, 0, 0);
