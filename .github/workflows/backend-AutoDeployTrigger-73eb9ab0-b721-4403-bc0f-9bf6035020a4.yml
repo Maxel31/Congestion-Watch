@@ -34,7 +34,8 @@ jobs:
       - name: Build and push container image to registry
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}backend/docker/Dockerfile.prod
+          appSourcePath: ${{ github.workspace }}/backend
+          dockerfilePath: docker/Dockerfile.prod
           _dockerfilePathKey_: _dockerfilePath_
           _targetLabelKey_: _targetLabel_
           registryUrl: congestionwatch.azurecr.io
@@ -45,5 +46,3 @@ jobs:
           imageToBuild: congestionwatch.azurecr.io/backend:${{ github.sha }}
           _buildArgumentsKey_: |
             _buildArgumentsValues_
-
-
