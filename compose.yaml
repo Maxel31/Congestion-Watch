@@ -19,13 +19,6 @@ services:
       - "8080:8080"
     volumes:
       - ./backend:/app
-    environment:
-      GO_ENV: ${ENV}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER:?err}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
-      POSTGRES_DB: ${POSTGRES_DB:?err}
     depends_on:
       postgres:
         condition: service_healthy
