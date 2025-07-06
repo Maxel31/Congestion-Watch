@@ -1,17 +1,6 @@
-import { Place, PlaceDetail, TimeSeries } from '@/types/api';
+import { TimeSeries } from '@/types/api';
 
-export const mockPlaces: Place[] = [
-  {
-    id: 1,
-    name: '北館食堂',
-  },
-  {
-    id: 2,
-    name: '南館食堂',
-  },
-];
-
-const generateTimeSeriesData = (): TimeSeries[] => {
+const generateTimeSeriesData = (placeId: number): TimeSeries[] => {
   const now = new Date();
   const data: TimeSeries[] = [];
 
@@ -40,7 +29,8 @@ const generateTimeSeriesData = (): TimeSeries[] => {
     const isFuture = timestamp > now;
 
     data.push({
-      timestamp: timestamp.toISOString(),
+      placeId: placeId,
+      targetDatetime: timestamp,
       actualScore: isFuture ? undefined : actualScore,
       predictedScore,
     });
@@ -48,13 +38,7 @@ const generateTimeSeriesData = (): TimeSeries[] => {
   return data;
 };
 
-export const mockPlaceDetails: Record<number, PlaceDetail> = {
-  1: {
-    place: mockPlaces[0],
-    timeSeries: generateTimeSeriesData(),
-  },
-  2: {
-    place: mockPlaces[1],
-    timeSeries: generateTimeSeriesData(),
-  },
+export const mockPlaceDetails: Record<number, TimeSeries[]> = {
+  1: generateTimeSeriesData(1),
+  2: generateTimeSeriesData(2),
 };

@@ -2,12 +2,9 @@ services:
   frontend:
     build:
       context: frontend
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.prod
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
     environment:
@@ -16,7 +13,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/docker/Dockerfile
+      dockerfile: backend/docker/Dockerfile.prod
     ports:
       - "8080:8080"
     volumes:
@@ -29,29 +26,25 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?err}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
       POSTGRES_DB: ${POSTGRES_DB:?err}
-    depends_on:
-      - postgres
 
   ml:
     build:
       context: .
       dockerfile: ml/docker/Dockerfile
     ports:
-      - "8001:8001"
+      - "5050:5050"
     volumes:
       - ./ml:/app
-    command: ["uv", "run", "python", "main.py", "--server"]
-    depends_on:
-      postgres:
-        condition: service_healthy
+    environment:
+      - PYTHON_ENV=development
 
   postgres:
     image: postgres:13
     container_name: postgresql
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?err}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      POSTGRES_DB: ${POSTGRES_DB:?err}
       TZ: "Asia/Tokyo"
     ports:
       - "5432:5432"
@@ -59,7 +52,7 @@ services:
       - ./database/schema:/docker-entrypoint-initdb.d
       - ./db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 3s
       retries: 3
 
