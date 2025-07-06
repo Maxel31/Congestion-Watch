@@ -5,9 +5,8 @@ RUN yarn install
 COPY . .
 RUN yarn build
 
-FROM busybox:1.37
-RUN adduser -D static
-USER static
-WORKDIR /home/static
-COPY --from=build-stage /app/dist .
-CMD ["busybox", "httpd", "-f", "-v", "-p", "5173"]
+FROM nginx:alpine
+COPY --from=build-stage /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
+EXPOSE 5173
+CMD ["nginx", "-g", "daemon off;"]

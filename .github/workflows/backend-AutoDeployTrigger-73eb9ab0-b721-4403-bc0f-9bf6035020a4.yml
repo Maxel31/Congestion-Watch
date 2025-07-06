@@ -4,19 +4,18 @@ name: Trigger auto deployment for backend
 on:
   # Automatically trigger it when detected changes in repo
   push:
-    branches: 
-      [ develop ]
+    branches: [develop]
     paths:
-    - '**'
-    - '.github/workflows/backend-AutoDeployTrigger-73eb9ab0-b721-4403-bc0f-9bf6035020a4.yml'
+      - "**"
+      - ".github/workflows/backend-AutoDeployTrigger-73eb9ab0-b721-4403-bc0f-9bf6035020a4.yml"
 
-  # Allow manual trigger 
-  workflow_dispatch:      
+  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions: 
+    permissions:
       id-token: write #This is required for requesting the OIDC JWT Token
       contents: read #Required when GH token is used to authenticate with private repo
 
