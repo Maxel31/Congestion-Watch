@@ -1,9 +1,9 @@
 -- 予測スコアテーブル
 CREATE TABLE IF NOT EXISTS predicted_score (
-    id SERIAL PRIMARY KEY,
-    model_id INTEGER NOT NULL REFERENCES prediction_model(id) ON DELETE CASCADE,
+    id BIGSERIAL PRIMARY KEY,
+    model_id BIGINT NOT NULL REFERENCES prediction_model(id) ON DELETE CASCADE,
     score INTEGER NOT NULL,
-    place_id INTEGER NOT NULL REFERENCES place(id) ON DELETE CASCADE,
+    place_id BIGINT NOT NULL REFERENCES place(id) ON DELETE CASCADE,
     target_datetime TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -1,7 +1,7 @@
 -- 予測モデルテーブル
 CREATE TABLE IF NOT EXISTS prediction_model (
-    id SERIAL PRIMARY KEY,
-    sensor_id INTEGER NOT NULL REFERENCES sensor(id) ON DELETE CASCADE,
+    id BIGSERIAL PRIMARY KEY,
+    sensor_id BIGINT NOT NULL REFERENCES sensor(id) ON DELETE CASCADE,
     model_params JSONB NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
