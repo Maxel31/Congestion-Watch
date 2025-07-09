@@ -21,7 +21,9 @@ const CurrentStatusCard = ({
     const latestActual = timeSeries
       .filter((d) => d.actualScore !== undefined)
       .slice(-1)[0];
-    return latestActual?.actualScore;
+    return latestActual?.actualScore
+      ? Math.round(latestActual?.actualScore * 10) / 10
+      : undefined;
   };
 
   const isCurrentlyOpen = () => {

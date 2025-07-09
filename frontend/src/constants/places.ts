@@ -6,9 +6,9 @@ const SOUTH_OPEN = [[11 * HOUR_MS, 14.5 * HOUR_MS], [17 * HOUR_MS, 19 * HOUR_MS]
 
 export const places: Place[] = [
     {
-        id: 1,
+        id: 2,
         name: '北館食堂',
-        capacity: 100,
+        capacity: 70,
         opens: {
             0: [],
             1: NORTH_OPEN,
@@ -20,9 +20,9 @@ export const places: Place[] = [
         }
     },
     {
-        id: 2,
+        id: 1,
         name: '南館食堂',
-        capacity: 400,
+        capacity: 250,
         opens: {
             0: [],
             1: SOUTH_OPEN,

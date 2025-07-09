@@ -8,8 +8,10 @@ const getCrowdnessInfo = (value: number) => {
   if (value <= 60)
     return { color: "#f59e0b", label: "普通", bgColor: "bg-yellow-100" };
   if (value <= 80)
-    return { color: "#f97316", label: "混雑", bgColor: "bg-orange-100" };
-  return { color: "#ef4444", label: "非常に混雑", bgColor: "bg-red-100" };
+    return { color: "#f97316", label: "やや混雑", bgColor: "bg-orange-100" };
+  if (value <= 100)
+    return { color: "#ef4444", label: "混雑", bgColor: "bg-red-100" };
+  return { color: "#dc2626", label: "非常に混雑", bgColor: "bg-red-200" };
 };
 
 const SpeedMeter = ({ value }: SpeedMeterProps) => {
@@ -41,7 +43,7 @@ const SpeedMeter = ({ value }: SpeedMeterProps) => {
           strokeDasharray={Math.PI * 105}
           strokeDashoffset={
             value !== undefined
-              ? Math.PI * 105 - (value / 100) * Math.PI * 105
+              ? Math.PI * 105 - (Math.min(value, 100) / 100) * Math.PI * 105
               : Math.PI * 105
           }
           className="transition-all duration-1000 ease-out"

@@ -89,6 +89,15 @@ const ChartCard = ({
       )
     : [];
 
+  const getMaxValue = () => {
+    const allValues = timeSeriesData
+      .flatMap((d) => [d.actual, d.predicted])
+      .filter((v) => v !== null) as number[];
+    return allValues.length > 0 ? Math.max(...allValues) : 0;
+  };
+
+  const yAxisMax = Math.max(120, getMaxValue() + 10);
+
   const getOpenAreas = () => {
     if (!place?.opens) return [];
     const areas: { x1: number; x2: number }[] = [];
@@ -185,7 +194,7 @@ const ChartCard = ({
                     tickLine={false}
                     axisLine={false}
                     className="text-xs"
-                    domain={[0, 120]}
+                    domain={[0, yAxisMax]}
                     tick={false}
                     width={10}
                   />

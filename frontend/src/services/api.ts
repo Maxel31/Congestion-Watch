@@ -1,3 +1,4 @@
+import { places } from '@/constants/places';
 import { TimeSeries } from '@/types/api';
 
 class ApiService {
@@ -26,9 +27,11 @@ class ApiService {
     const today = new Date().toISOString().split('T')[0];
     const response = await this.request<CloudDataResponse[]>(`/cloud-data/${placeId}/${today}`);
 
+    const capacity = places.find(place => place.id === placeId)?.capacity || 0;
+
     return response.map(item => ({
-      predictedScore: item.predicted_score,
-      actualScore: item.actual_score,
+      predictedScore: (item.predicted_score / capacity) * 100,
+      actualScore: item.actual_score ? (item.actual_score / capacity) * 100 : undefined,
       targetDatetime: new Date(new Date(item.target_datetime).getTime() - 9 * 60 * 60 * 1000),
       placeId: item.place_id
     }));

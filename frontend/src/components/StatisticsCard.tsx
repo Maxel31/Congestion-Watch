@@ -45,7 +45,9 @@ const StatisticsCard = ({
     });
 
     return {
-      score: peak.predictedScore || 0,
+      score: peak.predictedScore
+        ? Math.round(peak.predictedScore * 10) / 10
+        : undefined,
       time: peak.targetDatetime,
     };
   };
@@ -74,7 +76,9 @@ const StatisticsCard = ({
     });
 
     return {
-      score: peak.actualScore || 0,
+      score: peak.predictedScore
+        ? Math.round(peak.predictedScore * 10) / 10
+        : undefined,
       time: peak.targetDatetime,
     };
   };
@@ -88,7 +92,7 @@ const StatisticsCard = ({
     if (actualScores.length === 0) return 0;
 
     const total = actualScores.reduce((sum, score) => sum + score, 0);
-    return (total / actualScores.length).toFixed(1);
+    return Math.round((total / actualScores.length) * 10) / 10;
   };
 
   const formatTime = (timestamp: Date | null) => {
@@ -99,11 +103,13 @@ const StatisticsCard = ({
     });
   };
 
-  const getCongestionColor = (value: number) => {
+  const getCongestionColor = (value: number | undefined) => {
+    if (value === undefined) return "#dc2626";
     if (value <= 30) return "#22c55e";
     if (value <= 60) return "#f59e0b";
     if (value <= 80) return "#f97316";
-    return "#ef4444";
+    if (value <= 100) return "#ef4444";
+    return "#dc2626";
   };
   return (
     <Card>
