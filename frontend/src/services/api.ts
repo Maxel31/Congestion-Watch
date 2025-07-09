@@ -2,7 +2,7 @@ import { TimeSeries } from '@/types/api';
 
 class ApiService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const baseUrl = 'https://backend.braveisland-6b119380.japanwest.azurecontainerapps.io';
     const url = `${baseUrl}/api${endpoint}`;
 
     const response = await fetch(url, {
