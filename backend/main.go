@@ -82,6 +82,7 @@ func getCloudDataByDateHandler(cloudDataRepo repository.CloudDataRepository) htt
 		fmt.Printf("Successfully retrieved %d cloud data records\n", len(cloudData))
 
 		w.Header().Set("Content-Type", "application/json")
+
 		json.NewEncoder(w).Encode(cloudData)
 	}
 }
@@ -140,12 +141,14 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/cloud-data/{placeID}/{targetDate}", getCloudDataByDateHandler(cloudDataRepo)).Methods("GET")
 
-	// Setup CORS - allow all origins, headers, and methods
+	// より詳細なCORS設定
 	corsHandler := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"*"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"}),
 		handlers.AllowCredentials(),
+		handlers.ExposedHeaders([]string{"Content-Length"}),
+		handlers.MaxAge(300), // プリフライトリクエストのキャッシュ時間
 	)(r)
 
 	fmt.Println("Server starting on :8080")

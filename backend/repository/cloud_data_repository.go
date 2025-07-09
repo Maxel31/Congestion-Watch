@@ -41,7 +41,7 @@ func (r *cloudDataRepository) GetCloudDataByDate(placeID int, targetDate string)
 	}
 	defer rows.Close()
 
-	var cloudData []model.CloudData
+	var cloudData = make([]model.CloudData, 0)
 	for rows.Next() {
 		var cd model.CloudData
 		var predictedScore, actualScore sql.NullInt64
