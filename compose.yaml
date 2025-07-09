@@ -23,17 +23,6 @@ services:
       postgres:
         condition: service_healthy
 
-  ml:
-    build:
-      context: ml
-      dockerfile: docker/Dockerfile
-    volumes:
-      - ./ml:/app
-    command: ["uv", "run", "python", "main.py", "--server"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   postgres:
     image: postgres:13
     environment:
