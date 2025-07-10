@@ -8,7 +8,7 @@ const Header = ({ currentTimestamp }: HeaderProps) => {
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Congestion Watch</h1>
+        <h1 className="text-3xl font-bold text-gray-900">混雑ウォッチ</h1>
       </div>
       <div className="flex items-center space-x-2 text-sm text-gray-600">
         <Clock className="w-4 h-4" />
