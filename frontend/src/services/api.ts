@@ -22,7 +22,10 @@ class ApiService {
   }
 
   async getPlace(placeId: number): Promise<TimeSeries[]> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Tokyo'
+    }).format(new Date());
+
     const response = await this.request<CloudDataResponse[]>(`/cloud-data/${placeId}/${today}`);
 
     const capacity = places.find(place => place.id === placeId)?.capacity || 0;
