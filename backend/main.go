@@ -110,15 +110,11 @@ func main() {
 
 	fmt.Printf("Found %d places:\n", len(places))
 	for _, place := range places {
-		fmt.Printf("- %s (ID: %d)\n", place.Name, place.ID)
-		fmt.Printf("%+v\n", place)
-
 		actualScores, err := actualScoreRepo.GetActualScoresByPlace(place.ID)
 		if err != nil {
 			log.Printf("Failed to get actual scores for place %d: %v", place.ID, err)
 		} else {
 			fmt.Printf("  Actual scores: %d records\n", len(actualScores))
-			fmt.Printf("%+v\n", actualScores)
 		}
 
 		predictedScores, err := predictedScoreRepo.GetPredictedScoresByPlace(place.ID)
@@ -126,7 +122,6 @@ func main() {
 			log.Printf("Failed to get predicted scores for place %d: %v", place.ID, err)
 		} else {
 			fmt.Printf("  Predicted scores: %d records\n", len(predictedScores))
-			fmt.Printf("%+v\n", predictedScores)
 		}
 	}
 
@@ -135,7 +130,6 @@ func main() {
 		log.Fatal("Failed to get weather:", err)
 	}
 	fmt.Printf("Latest weather records: %d\n", len(weather))
-	fmt.Printf("%+v\n", weather)
 
 	// Setup HTTP server
 	r := mux.NewRouter()
