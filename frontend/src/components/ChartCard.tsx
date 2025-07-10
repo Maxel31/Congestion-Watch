@@ -79,13 +79,37 @@ const ChartCard = ({
   error,
   currentTimestamp,
 }: ChartCardProps) => {
+  const getTimeRange = () => {
+    if (!place?.opens || !place.opens[new Date().getDay()]) {
+      return { minHour: 9, maxHour: 21 };
+    }
+
+    const todayOpens = place.opens[new Date().getDay()];
+    const allHours = todayOpens.flatMap(([start, end]) => [
+      Math.floor(start / (60 * 60 * 1000)),
+      Math.floor(end / (60 * 60 * 1000)),
+    ]);
+
+    const minHour = Math.max(0, Math.min(...allHours) - 1);
+    const maxHour = Math.min(23, Math.max(...allHours));
+
+    return { minHour, maxHour };
+  };
+
+  const { minHour, maxHour } = getTimeRange();
+
   const timeSeriesData = timeSeries?.length
     ? smoothPredictedData(
-        timeSeries.map((t) => ({
-          time: t.targetDatetime.getTime(),
-          actual: t.actualScore || null,
-          predicted: t.predictedScore || null,
-        }))
+        timeSeries
+          .map((t) => ({
+            time: t.targetDatetime.getTime(),
+            actual: t.actualScore || null,
+            predicted: t.predictedScore || null,
+          }))
+          .filter((item) => {
+            const hour = new Date(item.time).getHours();
+            return hour >= minHour && hour <= maxHour;
+          })
       )
     : [];
 
@@ -97,6 +121,9 @@ const ChartCard = ({
   };
 
   const yAxisMax = Math.max(120, getMaxValue() + 10);
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
 
   const getOpenAreas = () => {
     if (!place?.opens) return [];
@@ -119,7 +146,6 @@ const ChartCard = ({
     });
     return areas;
   };
-
   return (
     <Card>
       <CardHeader>
@@ -179,12 +205,18 @@ const ChartCard = ({
                     className="text-xs"
                     type="number"
                     scale="time"
-                    domain={["dataMin", "dataMax"]}
-                    ticks={Array.from({ length: 24 }, (_, i) => {
-                      const startOfDay = new Date();
-                      startOfDay.setHours(0, 0, 0, 0);
-                      return startOfDay.getTime() + i * 60 * 60 * 1000;
-                    })}
+                    domain={[
+                      startOfDay.getTime() + minHour * 60 * 60 * 1000,
+                      startOfDay.getTime() + maxHour * 60 * 60 * 1000,
+                    ]}
+                    ticks={Array.from(
+                      { length: maxHour - minHour + 1 },
+                      (_, i) => {
+                        return (
+                          startOfDay.getTime() + (minHour + i) * 60 * 60 * 1000
+                        );
+                      }
+                    )}
                     tickFormatter={(value) => {
                       const date = new Date(value);
                       return date.getHours() + ":00";
@@ -194,7 +226,8 @@ const ChartCard = ({
                     tickLine={false}
                     axisLine={false}
                     className="text-xs"
-                    domain={[0, yAxisMax]}
+                    min={0}
+                    max={yAxisMax}
                     tick={false}
                     width={10}
                   />
