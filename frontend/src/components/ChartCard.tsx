@@ -43,7 +43,7 @@ const smoothPredictedData = (
   }>
 ) => {
   const smoothedData = [...data];
-  const windowSize = 1;
+  const windowSize = 3;
 
   for (let i = 0; i < smoothedData.length; i++) {
     if (smoothedData[i].predicted !== null) {
