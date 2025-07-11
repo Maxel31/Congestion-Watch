@@ -3,6 +3,7 @@ export interface Place {
   name: string;
   capacity: number;
   opens: { [day: number]: number[][] }
+  range: [number, number];
 }
 
 export interface TimeSeries {

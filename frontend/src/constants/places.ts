@@ -17,7 +17,8 @@ export const places: Place[] = [
             4: NORTH_OPEN,
             5: NORTH_OPEN,
             6: [],
-        }
+        },
+        range: [10, 15]
     },
     {
         id: 1,
@@ -31,6 +32,7 @@ export const places: Place[] = [
             4: SOUTH_OPEN,
             5: SOUTH_OPEN,
             6: [],
-        }
+        },
+        range: [10, 20],
     },
 ];

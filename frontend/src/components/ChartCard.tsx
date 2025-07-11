@@ -80,20 +80,10 @@ const ChartCard = ({
   currentTimestamp,
 }: ChartCardProps) => {
   const getTimeRange = () => {
-    if (!place?.opens || !place.opens[new Date().getDay()]) {
+    if (!place?.range) {
       return { minHour: 9, maxHour: 21 };
     }
-
-    const todayOpens = place.opens[new Date().getDay()];
-    const allHours = todayOpens.flatMap(([start, end]) => [
-      Math.floor(start / (60 * 60 * 1000)),
-      Math.floor(end / (60 * 60 * 1000)),
-    ]);
-
-    const minHour = Math.max(0, Math.min(...allHours) - 1);
-    const maxHour = Math.min(23, Math.max(...allHours));
-
-    return { minHour, maxHour };
+    return { minHour: place.range[0], maxHour: place.range[1] };
   };
 
   const { minHour, maxHour } = getTimeRange();
@@ -115,7 +105,7 @@ const ChartCard = ({
 
   const getMaxValue = () => {
     const allValues = timeSeriesData
-      .flatMap((d) => [d.actual, d.predicted])
+      .flatMap((t) => [t.actual, t.predicted])
       .filter((v) => v !== null) as number[];
     return allValues.length > 0 ? Math.max(...allValues) : 0;
   };
@@ -226,8 +216,7 @@ const ChartCard = ({
                     tickLine={false}
                     axisLine={false}
                     className="text-xs"
-                    min={0}
-                    max={yAxisMax}
+                    domain={[0, yAxisMax]}
                     tick={false}
                     width={10}
                   />
