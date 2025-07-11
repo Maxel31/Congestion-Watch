@@ -2,16 +2,17 @@ interface SpeedMeterProps {
   value?: number;
 }
 
+const CROWDNESS_LEVELS = [
+  { threshold: 30, color: "#22c55e", label: "空いている" },
+  { threshold: 60, color: "#f59e0b", label: "普通" },
+  { threshold: 80, color: "#f97316", label: "やや混雑" },
+  { threshold: 100, color: "#ef4444", label: "混雑" },
+  { threshold: Infinity, color: "#dc2626", label: "非常に混雑" },
+];
+
 const getCrowdnessInfo = (value: number) => {
-  if (value <= 30)
-    return { color: "#22c55e", label: "空いている", bgColor: "bg-green-100" };
-  if (value <= 60)
-    return { color: "#f59e0b", label: "普通", bgColor: "bg-yellow-100" };
-  if (value <= 80)
-    return { color: "#f97316", label: "やや混雑", bgColor: "bg-orange-100" };
-  if (value <= 100)
-    return { color: "#ef4444", label: "混雑", bgColor: "bg-red-100" };
-  return { color: "#dc2626", label: "非常に混雑", bgColor: "bg-red-200" };
+  const level = CROWDNESS_LEVELS.find((level) => value <= level.threshold);
+  return { color: level!.color, label: level!.label };
 };
 
 const SpeedMeter = ({ value }: SpeedMeterProps) => {
@@ -50,10 +51,16 @@ const SpeedMeter = ({ value }: SpeedMeterProps) => {
         />
         {[0, 25, 50, 75, 100].map((tick) => {
           const angle = (tick / 100) * Math.PI;
-          const x1 = 110 + 90 * Math.cos(angle);
-          const y1 = 110 - 90 * Math.sin(angle);
-          const x2 = 110 + 80 * Math.cos(angle);
-          const y2 = 110 - 80 * Math.sin(angle);
+          const centerX = 110;
+          const centerY = 110;
+          const outerRadius = 90;
+          const innerRadius = 80;
+
+          const x1 = centerX + outerRadius * Math.cos(angle);
+          const y1 = centerY - outerRadius * Math.sin(angle);
+          const x2 = centerX + innerRadius * Math.cos(angle);
+          const y2 = centerY - innerRadius * Math.sin(angle);
+
           return (
             <line
               key={tick}

@@ -20,20 +20,19 @@ export const useTimeSeries = (placeId: number): UsePlaceDetailData => {
     setError(null);
 
     try {
+      const response = await apiService.getPlace(placeId);
+      setTimeSeries(response);
+    } catch (err) {
+      console.warn(`Failed to fetch place detail for ID ${placeId}, using mock data:`, err);
+      
       try {
-        const response = await apiService.getPlace(placeId);
-        setTimeSeries(response);
-      } catch (err) {
-        console.warn(`Failed to fetch place detail for ID ${placeId}, using mock data:`, err);
         await new Promise(resolve => setTimeout(resolve, 500));
         const detail = mockTimeSeries[placeId];
-        if (!detail) {
-          throw new Error('Place not found');
-        }
+        if (!detail) throw new Error('Place not found');
         setTimeSeries(detail);
+      } catch (mockErr) {
+        setError(mockErr instanceof Error ? mockErr : new Error('Failed to fetch place detail'));
       }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch place detail'));
     } finally {
       setLoading(false);
     }
@@ -46,7 +45,7 @@ export const useTimeSeries = (placeId: number): UsePlaceDetailData => {
   }, [placeId]);
 
   return {
-    timeSeries: timeSeries,
+    timeSeries,
     loading,
     error,
     refetch: fetchPlaceDetail,

@@ -18,11 +18,13 @@ const CurrentStatusCard = ({
 }: CurrentStatusCardProps) => {
   const getCurrentCongestion = () => {
     if (!timeSeries) return undefined;
+
     const latestActual = timeSeries
       .filter((d) => d.actualScore !== undefined)
       .slice(-1)[0];
+
     return latestActual?.actualScore
-      ? Math.round(latestActual?.actualScore * 10) / 10
+      ? Math.round(latestActual.actualScore * 10) / 10
       : undefined;
   };
 
@@ -73,9 +75,7 @@ const CurrentStatusCard = ({
             <div className="text-red-500">エラー: {error.message}</div>
           </div>
         ) : (
-          <>
-            <SpeedMeter value={getCurrentCongestion()} />
-          </>
+          <SpeedMeter value={getCurrentCongestion()} />
         )}
       </CardContent>
     </Card>

@@ -35,6 +35,8 @@ const chartConfig = {
   },
 };
 
+const WINDOW_SIZE = 3;
+
 const smoothPredictedData = (
   data: Array<{
     time: number;
@@ -43,29 +45,28 @@ const smoothPredictedData = (
   }>
 ) => {
   const smoothedData = [...data];
-  const windowSize = 3;
 
   for (let i = 0; i < smoothedData.length; i++) {
-    if (smoothedData[i].predicted !== null) {
-      const start = Math.max(0, i - Math.floor(windowSize / 2));
-      const end = Math.min(
-        smoothedData.length,
-        i + Math.floor(windowSize / 2) + 1
-      );
+    if (smoothedData[i].predicted === null) continue;
 
-      const validValues = smoothedData
-        .slice(start, end)
-        .map((item) => item.predicted)
-        .filter((val) => val !== null) as number[];
+    const start = Math.max(0, i - Math.floor(WINDOW_SIZE / 2));
+    const end = Math.min(
+      smoothedData.length,
+      i + Math.floor(WINDOW_SIZE / 2) + 1
+    );
 
-      if (validValues.length > 0) {
-        const average =
-          validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
-        smoothedData[i] = {
-          ...smoothedData[i],
-          predicted: Math.round(average),
-        };
-      }
+    const validValues = smoothedData
+      .slice(start, end)
+      .map((item) => item.predicted)
+      .filter((val) => val !== null) as number[];
+
+    if (validValues.length > 0) {
+      const average =
+        validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
+      smoothedData[i] = {
+        ...smoothedData[i],
+        predicted: Math.round(average),
+      };
     }
   }
 
@@ -79,14 +80,9 @@ const ChartCard = ({
   error,
   currentTimestamp,
 }: ChartCardProps) => {
-  const getTimeRange = () => {
-    if (!place?.range) {
-      return { minHour: 9, maxHour: 21 };
-    }
-    return { minHour: place.range[0], maxHour: place.range[1] };
-  };
-
-  const { minHour, maxHour } = getTimeRange();
+  const { minHour, maxHour } = place?.range
+    ? { minHour: place.range[0], maxHour: place.range[1] }
+    : { minHour: 9, maxHour: 21 };
 
   const timeSeriesData = timeSeries?.length
     ? smoothPredictedData(
@@ -103,38 +99,30 @@ const ChartCard = ({
       )
     : [];
 
-  const getMaxValue = () => {
-    const allValues = timeSeriesData
-      .flatMap((t) => [t.actual, t.predicted])
-      .filter((v) => v !== null) as number[];
-    return allValues.length > 0 ? Math.max(...allValues) : 0;
-  };
-
-  const yAxisMax = Math.max(120, getMaxValue() + 10);
+  const allValues = timeSeriesData
+    .flatMap((t) => [t.actual, t.predicted])
+    .filter((v) => v !== null) as number[];
+  const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
+  const yAxisMax = Math.max(120, maxValue + 10);
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
   const getOpenAreas = () => {
     if (!place?.opens) return [];
-    const areas: { x1: number; x2: number }[] = [];
+
     const today = new Date();
-    const startOfDay = new Date(
+    const dayStart = new Date(
       today.getFullYear(),
       today.getMonth(),
-      today.getDate(),
-      0,
-      0,
-      0,
-      0
+      today.getDate()
     );
-    place.opens[new Date().getDay()].forEach(([start, end]) => {
-      areas.push({
-        x1: startOfDay.getTime() + start,
-        x2: startOfDay.getTime() + end,
-      });
-    });
-    return areas;
+    const todayHours = place.opens[today.getDay()];
+
+    return todayHours.map(([start, end]) => ({
+      x1: dayStart.getTime() + start,
+      x2: dayStart.getTime() + end,
+    }));
   };
   return (
     <Card>

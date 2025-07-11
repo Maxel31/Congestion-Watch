@@ -38,11 +38,9 @@ const StatisticsCard = ({
 
     if (futureOpenTimeSeries.length === 0) return { score: 0, time: null };
 
-    const peak = futureOpenTimeSeries.reduce((max, current) => {
-      return (current.predictedScore || 0) > (max.predictedScore || 0)
-        ? current
-        : max;
-    });
+    const peak = futureOpenTimeSeries.reduce((max, current) =>
+      (current.predictedScore || 0) > (max.predictedScore || 0) ? current : max
+    );
 
     return {
       score: peak.predictedScore
@@ -56,10 +54,20 @@ const StatisticsCard = ({
     if (!timeSeries) return { score: 0, time: null };
 
     const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const endOfDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
 
     const todayData = timeSeries
       .filter(
@@ -69,15 +77,13 @@ const StatisticsCard = ({
 
     if (todayData.length === 0) return { score: 0, time: null };
 
-    const peak = todayData.reduce((max, current) => {
-      return (current.actualScore || 0) > (max.actualScore || 0)
-        ? current
-        : max;
-    });
+    const peak = todayData.reduce((max, current) =>
+      (current.actualScore || 0) > (max.actualScore || 0) ? current : max
+    );
 
     return {
-      score: peak.predictedScore
-        ? Math.round(peak.predictedScore * 10) / 10
+      score: peak.actualScore
+        ? Math.round(peak.actualScore * 10) / 10
         : undefined,
       time: peak.targetDatetime,
     };
@@ -85,23 +91,23 @@ const StatisticsCard = ({
 
   const getAverageCongestion = () => {
     if (!timeSeries) return 0;
+
     const actualScores = timeSeries
       .map((t) => t.actualScore)
       .filter((score) => score !== undefined) as number[];
 
     if (actualScores.length === 0) return 0;
 
-    const total = actualScores.reduce((sum, score) => sum + score, 0);
-    return Math.round((total / actualScores.length) * 10) / 10;
+    const average =
+      actualScores.reduce((sum, score) => sum + score, 0) / actualScores.length;
+    return Math.round(average * 10) / 10;
   };
 
-  const formatTime = (timestamp: Date | null) => {
-    if (!timestamp) return "";
-    return timestamp.toLocaleTimeString("ja-JP", {
+  const formatTime = (timestamp: Date | null) =>
+    timestamp?.toLocaleTimeString("ja-JP", {
       hour: "2-digit",
       minute: "2-digit",
-    });
-  };
+    }) || "";
 
   const getCongestionColor = (value: number | undefined) => {
     if (value === undefined) return "#dc2626";

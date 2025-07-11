@@ -13,6 +13,7 @@ const Dashboard = () => {
   const { timeSeries, loading, error, refetch } = useTimeSeries(
     selectedPlaceId || 0
   );
+  const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
 
   usePolling(
     () => {
@@ -23,8 +24,8 @@ const Dashboard = () => {
     { interval: 60000 }
   );
 
-  const selectedPlace = places.find((p) => p.id === selectedPlaceId) || null;
-  const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
+  const selectedPlace =
+    places.find((place) => place.id === selectedPlaceId) || null;
 
   useEffect(() => {
     if (places.length > 0 && selectedPlaceId === null) {
@@ -34,7 +35,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTimestamp(new Date().getTime());
+      setCurrentTimestamp(Date.now());
     }, 10000);
     return () => clearInterval(interval);
   }, []);

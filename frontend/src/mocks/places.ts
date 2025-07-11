@@ -1,41 +1,38 @@
 import { TimeSeries } from '@/types/api';
 
+const TIME_INTERVAL_MINUTES = 5;
+const INTERVALS_PER_DAY = 288;
+const VARIATION_RANGE = 20;
+const PREDICTION_VARIANCE = 10;
+
+const getBaseCongestionScore = (hour: number): number => {
+  if (hour >= 11 && hour <= 13) return 80;
+  if (hour >= 17 && hour <= 19) return 70;
+  if (hour >= 7 && hour <= 9) return 50;
+  return 30;
+};
+
 const generateTimeSeriesData = (placeId: number): TimeSeries[] => {
   const now = new Date();
-  const data: TimeSeries[] = [];
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // その日の0時から23時55分までのデータを5分間隔で生成
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-
-  for (let i = 0; i < 288; i++) {
-    const timestamp = new Date(startOfDay.getTime() + i * 5 * 60 * 1000);
+  return Array.from({ length: INTERVALS_PER_DAY }, (_, i) => {
+    const timestamp = new Date(startOfDay.getTime() + i * TIME_INTERVAL_MINUTES * 60 * 1000);
     const hour = timestamp.getHours();
 
-    // 施設ごとの混雑パターン
-    let baseScore = 30;
-    if (hour >= 11 && hour <= 13) baseScore = 80;
-    else if (hour >= 17 && hour <= 19) baseScore = 70;
-    else if (hour >= 7 && hour <= 9) baseScore = 50;
-
-    // ランダムな変動を追加
-    const variation = Math.floor(Math.random() * 20) - 10;
+    const baseScore = getBaseCongestionScore(hour);
+    const variation = Math.floor(Math.random() * VARIATION_RANGE) - VARIATION_RANGE / 2;
     const actualScore = Math.max(0, Math.min(100, baseScore + variation));
-
-    // 未来のデータには予測値も含める
-    const predictedScore = actualScore + Math.floor(Math.random() * 10) - 5;
-
-    // 現在時刻以降はactualScoreを含めない
+    const predictedScore = actualScore + Math.floor(Math.random() * PREDICTION_VARIANCE) - PREDICTION_VARIANCE / 2;
     const isFuture = timestamp > now;
 
-    data.push({
-      placeId: placeId,
+    return {
+      placeId,
       targetDatetime: timestamp,
       actualScore: isFuture ? undefined : actualScore,
       predictedScore,
-    });
-  }
-  return data;
+    };
+  });
 };
 
 export const mockPlaceDetails: Record<number, TimeSeries[]> = {

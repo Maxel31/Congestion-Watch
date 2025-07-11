@@ -23,23 +23,19 @@ const PlaceSelector = ({
       </CardHeader>
       <CardContent className="flex justify-center h-16">
         <div className="grid grid-cols-2 gap-4 w-full">
-          {places.map((place) => {
-            return (
-              <button
-                key={place.id}
-                onClick={() => onSelectPlace(place.id)}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  selectedPlaceId === place.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-gray-900">{place.name}</h3>
-                </div>
-              </button>
-            );
-          })}
+          {places.map((place) => (
+            <button
+              key={place.id}
+              onClick={() => onSelectPlace(place.id)}
+              className={`p-4 rounded-lg border-2 transition-all ${
+                selectedPlaceId === place.id
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <h3 className="font-medium text-gray-900">{place.name}</h3>
+            </button>
+          ))}
         </div>
       </CardContent>
     </Card>
