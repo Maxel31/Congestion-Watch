@@ -1,11 +1,14 @@
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Place, TimeSeries } from "@/types/api";
-import { ChartLine } from "lucide-react";
+import { useTimeSeries } from "@/hooks/usePlaces";
+import { Place } from "@/types/api";
+import { Calendar as CalendarIcon, ChartLine, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -17,10 +20,7 @@ import {
 } from "recharts";
 
 interface ChartCardProps {
-  timeSeries: TimeSeries[] | null;
   place: Place | null;
-  loading: boolean;
-  error: Error | null;
   currentTimestamp: number;
 }
 
@@ -73,13 +73,25 @@ const smoothPredictedData = (
   return smoothedData;
 };
 
-const ChartCard = ({
-  timeSeries,
-  place,
-  loading,
-  error,
-  currentTimestamp,
-}: ChartCardProps) => {
+const ChartCard = ({ place, currentTimestamp }: ChartCardProps) => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  const { timeSeries, loading, error } = useTimeSeries(
+    place?.id || 0,
+    selectedDate
+  );
+
+  const today = new Date();
+  const isToday = selectedDate.toDateString() === today.toDateString();
+
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const handleResetToToday = () => {
+    setSelectedDate(new Date());
+  };
   const { minHour, maxHour } = place?.range
     ? { minHour: place.range[0], maxHour: place.range[1] }
     : { minHour: 9, maxHour: 21 };
@@ -105,21 +117,20 @@ const ChartCard = ({
   const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
   const yAxisMax = Math.max(120, maxValue + 10);
 
-  const startOfDay = new Date();
+  const startOfDay = new Date(selectedDate);
   startOfDay.setHours(0, 0, 0, 0);
 
   const getOpenAreas = () => {
     if (!place?.opens) return [];
 
-    const today = new Date();
     const dayStart = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate()
     );
-    const todayHours = place.opens[today.getDay()];
+    const selectedDayHours = place.opens[selectedDate.getDay()];
 
-    return todayHours.map(([start, end]) => ({
+    return selectedDayHours.map(([start, end]) => ({
       x1: dayStart.getTime() + start,
       x2: dayStart.getTime() + end,
     }));
@@ -127,10 +138,46 @@ const ChartCard = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <ChartLine className="w-5 h-5 mr-2" />
-          混雑度の推移
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <ChartLine className="w-5 h-5 mr-2" />
+            混雑度の推移
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                {selectedDate.toLocaleDateString("ja-JP")}
+              </button>
+              {showCalendar && (
+                <div className="absolute top-full mt-2 right-0 z-10">
+                  <Calendar
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        handleDateChange(date);
+                        setShowCalendar(false);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            {!isToday && (
+              <button
+                onClick={handleResetToToday}
+                className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors"
+                title="今日のデータに戻る"
+              >
+                <RotateCcw className="w-4 h-4" />
+                今日
+              </button>
+            )}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -140,6 +187,10 @@ const ChartCard = ({
         ) : error ? (
           <div className="flex justify-center items-center h-96">
             <div className="text-red-500">エラー: {error.message}</div>
+          </div>
+        ) : !timeSeries || timeSeries.length === 0 ? (
+          <div className="flex flex-col justify-center items-center h-96">
+            <div className="text-gray-500 text-lg mb-2">データなし</div>
           </div>
         ) : (
           <>

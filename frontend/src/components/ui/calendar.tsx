@@ -55,7 +55,7 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
     return (
       <div
         ref={ref}
-        className={cn("p-3 bg-white border rounded-lg shadow-sm", className)}
+        className={cn("p-4 bg-white border rounded-lg shadow-sm w-80", className)}
         {...props}
       >
         {/* Header */}
@@ -82,7 +82,7 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
           {dayNames.map((dayName) => (
             <div
               key={dayName}
-              className="h-8 flex items-center justify-center text-sm font-medium text-gray-500"
+              className="h-10 flex items-center justify-center text-sm font-medium text-gray-500"
             >
               {dayName}
             </div>
@@ -94,13 +94,13 @@ const Calendar = React.forwardRef<HTMLDivElement, CalendarProps>(
           {days.map((date, index) => (
             <div
               key={index}
-              className="h-8 flex items-center justify-center"
+              className="h-10 flex items-center justify-center"
             >
               {date && (
                 <button
                   onClick={() => handleDayClick(date)}
                   className={cn(
-                    "w-8 h-8 text-sm rounded hover:bg-gray-100",
+                    "w-10 h-10 text-sm rounded hover:bg-gray-100",
                     selected &&
                       date.toDateString() === selected.toDateString() &&
                       "bg-blue-500 text-white hover:bg-blue-600",

@@ -10,7 +10,7 @@ interface UsePlaceDetailData {
   refetch: () => void;
 }
 
-export const useTimeSeries = (placeId: number): UsePlaceDetailData => {
+export const useTimeSeries = (placeId: number, date?: Date): UsePlaceDetailData => {
   const [timeSeries, setTimeSeries] = useState<TimeSeries[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -20,7 +20,7 @@ export const useTimeSeries = (placeId: number): UsePlaceDetailData => {
     setError(null);
 
     try {
-      const response = await apiService.getPlace(placeId);
+      const response = await apiService.getPlace(placeId, date);
       setTimeSeries(response);
     } catch (err) {
       console.warn(`Failed to fetch place detail for ID ${placeId}, using mock data:`, err);
@@ -42,7 +42,7 @@ export const useTimeSeries = (placeId: number): UsePlaceDetailData => {
     if (placeId) {
       fetchPlaceDetail();
     }
-  }, [placeId]);
+  }, [placeId, date]);
 
   return {
     timeSeries,

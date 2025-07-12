@@ -22,12 +22,13 @@ class ApiService {
     return response.json();
   }
 
-  async getPlace(placeId: number): Promise<TimeSeries[]> {
-    const today = new Intl.DateTimeFormat('en-CA', {
+  async getPlace(placeId: number, date?: Date): Promise<TimeSeries[]> {
+    const targetDate = date || new Date();
+    const formattedDate = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'Asia/Tokyo'
-    }).format(new Date());
+    }).format(targetDate);
 
-    const response = await this.request<CloudDataResponse[]>(`/cloud-data/${placeId}/${today}`);
+    const response = await this.request<CloudDataResponse[]>(`/cloud-data/${placeId}/${formattedDate}`);
     const place = places.find(place => place.id === placeId);
     const capacity = place?.capacity || 0;
 
