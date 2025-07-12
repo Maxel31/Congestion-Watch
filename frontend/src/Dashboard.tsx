@@ -9,10 +9,9 @@ import { useEffect, useState } from "react";
 import { places } from "./constants/places";
 
 const Dashboard = () => {
-  const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null);
-  const { timeSeries, loading, error, refetch } = useTimeSeries(
-    selectedPlaceId || 0
-  );
+  const [selectedPlaceId, setSelectedPlaceId] = useState<number>(1);
+  const { timeSeries, loading, error, refetch } =
+    useTimeSeries(selectedPlaceId);
   const [currentTimestamp, setCurrentTimestamp] = useState<number>(Date.now());
 
   usePolling(
@@ -39,7 +38,6 @@ const Dashboard = () => {
     }, 10000);
     return () => clearInterval(interval);
   }, []);
-
 
   return (
     <div className="min-h-screen p-4">
@@ -68,10 +66,7 @@ const Dashboard = () => {
           />
         </div>
 
-        <ChartCard
-          place={selectedPlace}
-          currentTimestamp={currentTimestamp}
-        />
+        <ChartCard place={selectedPlace} currentTimestamp={currentTimestamp} />
       </div>
     </div>
   );
